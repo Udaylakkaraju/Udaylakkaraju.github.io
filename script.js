@@ -6,6 +6,14 @@
 (function () {
     'use strict';
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const allowsMotion = !prefersReducedMotion.matches;
+    const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const isLowPowerDevice = (
+        (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+        (navigator.deviceMemory && navigator.deviceMemory <= 4)
+    );
+
     // =============================================
     // DARK MODE TOGGLE
     // =============================================
@@ -34,38 +42,43 @@
     // =============================================
     const cursorGlow = document.getElementById('cursorGlow');
     let glowX = 0, glowY = 0, targetX = 0, targetY = 0;
-    let glowRaf; // Track requestAnimationFrame
+    let glowRaf;
 
-    document.addEventListener('mousemove', (e) => {
-        targetX = e.clientX;
-        targetY = e.clientY;
-        if (cursorGlow) cursorGlow.style.opacity = '1';
-        
-        // Start loop if not running
-        if (!glowRaf) updateGlow();
-    });
+    if (cursorGlow && allowsMotion && isFinePointer) {
+        window.addEventListener('pointermove', (e) => {
+            if (e.pointerType && e.pointerType !== 'mouse') return;
 
-    document.addEventListener('mouseleave', () => {
-        if (cursorGlow) cursorGlow.style.opacity = '0';
-    });
+            targetX = e.clientX;
+            targetY = e.clientY;
+            cursorGlow.style.opacity = '1';
 
-    function updateGlow() {
-        const dx = targetX - glowX;
-        const dy = targetY - glowY;
-        
-        // If movement is extremely small, stop looping
-        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
-            glowRaf = null;
-            return; 
+            if (!glowRaf) {
+                glowX = targetX;
+                glowY = targetY;
+                updateGlow();
+            }
+        }, { passive: true });
+
+        window.addEventListener('pointerleave', () => {
+            cursorGlow.style.opacity = '0';
+        });
+
+        function updateGlow() {
+            const dx = targetX - glowX;
+            const dy = targetY - glowY;
+
+            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+                glowRaf = null;
+                return;
+            }
+
+            glowX += dx * 0.1;
+            glowY += dy * 0.1;
+            cursorGlow.style.transform = `translate3d(${glowX - 225}px, ${glowY - 225}px, 0)`;
+            glowRaf = requestAnimationFrame(updateGlow);
         }
-
-        glowX += dx * 0.06;
-        glowY += dy * 0.06;
-        if (cursorGlow) {
-            cursorGlow.style.left = glowX + 'px';
-            cursorGlow.style.top = glowY + 'px';
-        }
-        glowRaf = requestAnimationFrame(updateGlow);
+    } else if (cursorGlow) {
+        cursorGlow.style.display = 'none';
     }
 
 
@@ -93,7 +106,10 @@
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
-            if (href === '#') return; // Ignore empty anchor tags like Back to Top
+            if (href === '#') {
+                e.preventDefault();
+                return;
+            }
             e.preventDefault();
             const t = document.querySelector(href);
             if (t) window.scrollTo({ top: t.offsetTop - 80, behavior: 'smooth' });
@@ -107,22 +123,20 @@
     // =============================================
     const revealEls = document.querySelectorAll('[data-reveal]');
 
+    const revealCountsByParent = new WeakMap();
+    revealEls.forEach(el => {
+        const parent = el.parentElement;
+        const revealIndex = revealCountsByParent.get(parent) || 0;
+        el.dataset.revealDelay = String(revealIndex * 90);
+        revealCountsByParent.set(parent, revealIndex + 1);
+    });
+
     const revealObs = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const parent = entry.target.parentElement;
-                const siblings = Array.from(parent.querySelectorAll('[data-reveal]:not(.revealed)'));
-                let delay = 0;
-                siblings.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.top < window.innerHeight + 60) {
-                        setTimeout(() => el.classList.add('revealed'), delay);
-                        delay += 90;
-                    }
-                });
-            } else {
-                entry.target.classList.remove('revealed');
-            }
+            entry.target.style.transitionDelay = entry.isIntersecting
+                ? `${entry.target.dataset.revealDelay || 0}ms`
+                : '0ms';
+            entry.target.classList.toggle('revealed', entry.isIntersecting);
         });
     }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
@@ -160,44 +174,64 @@
 
 
     // =============================================
-    // 3D TILT — Cards with data-tilt (Optimized)
+    // 3D TILT — Cards with data-tilt (desktop only)
     // =============================================
-    document.querySelectorAll('[data-tilt]').forEach(card => {
-        let rect;
-        card.addEventListener('mouseenter', () => {
-            rect = card.getBoundingClientRect();
-        });
+    if (allowsMotion && isFinePointer) {
+        document.querySelectorAll('[data-tilt]').forEach(card => {
+            let rect;
+            let tiltRaf = null;
+            let pointerX = 0;
+            let pointerY = 0;
 
-        card.addEventListener('mousemove', (e) => {
-            if (!rect) return; // Fallback
-            const x = (e.clientX - rect.left) / rect.width - 0.5;
-            const y = (e.clientY - rect.top) / rect.height - 0.5;
-            // Use requestAnimationFrame for smoother hardware-accelerated paint
-            requestAnimationFrame(() => {
+            function renderTilt() {
+                tiltRaf = null;
+                if (!rect) return;
+
+                const x = (pointerX - rect.left) / rect.width - 0.5;
+                const y = (pointerY - rect.top) / rect.height - 0.5;
                 card.style.transform = `perspective(600px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg) translateY(-6px) scale(1.02)`;
-            });
-        });
+            }
 
-        card.addEventListener('mouseleave', () => {
-            rect = null;
-            requestAnimationFrame(() => {
+            card.addEventListener('pointerenter', () => {
+                rect = card.getBoundingClientRect();
+            });
+ 
+            card.addEventListener('pointermove', (e) => {
+                if (!rect) return;
+                pointerX = e.clientX;
+                pointerY = e.clientY;
+                if (!tiltRaf) tiltRaf = requestAnimationFrame(renderTilt);
+            }, { passive: true });
+ 
+            card.addEventListener('pointerleave', () => {
+                rect = null;
+                if (tiltRaf) {
+                    cancelAnimationFrame(tiltRaf);
+                    tiltRaf = null;
+                }
                 card.style.transform = '';
             });
         });
-    });
+    }
 
 
     // =============================================
     // THREE.JS DATA CORE
     // =============================================
     const canvasContainer = document.getElementById('canvas-container');
-    if (canvasContainer && window.THREE) {
+    if (canvasContainer && window.THREE && allowsMotion && window.innerWidth > 900) {
+        const maxPixelRatio = isLowPowerDevice ? 1.25 : 1.5;
+        const numParticles = isLowPowerDevice ? 260 : 420;
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        const renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: !isLowPowerDevice,
+            powerPreference: isLowPowerDevice ? 'default' : 'high-performance'
+        });
         renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
         canvasContainer.appendChild(renderer.domElement);
 
         // Scale up camera slightly to fit the bigger elements without cutting the ring off the viewport
@@ -214,7 +248,6 @@
             { color: new THREE.Color(0xfdcb6e), center: new THREE.Vector3(-2, -2, 2) } // Electric Yellow
         ];
 
-        const numParticles = 600;
         const positions = new Float32Array(numParticles * 3);
         const colors = new Float32Array(numParticles * 3);
         const particleData = [];
@@ -303,19 +336,33 @@
 
         scene.add(chartGroup);
 
-        window.addEventListener('resize', () => {
-            if (!canvasContainer) return;
+        function resizeThreeScene() {
             camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        });
+        }
+        window.addEventListener('resize', resizeThreeScene, { passive: true });
 
         const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
+        let isHeroVisible = true;
+        let threeRaf = null;
+        let isThreeRunning = false;
+        const minThreeFrameInterval = isLowPowerDevice ? (1000 / 48) : 0;
+        let lastThreeFrameTime = 0;
+        
+        const heroSection = document.getElementById('hero');
+        const heroObserver = new IntersectionObserver(([e]) => {
+            isHeroVisible = e.isIntersecting;
+            syncThreeLoop();
+        }, { threshold: 0.1 });
+        heroObserver.observe(heroSection);
+
+        function animate(now) {
+            threeRaf = requestAnimationFrame(animate);
+            if (minThreeFrameInterval && now - lastThreeFrameTime < minThreeFrameInterval) return;
+            lastThreeFrameTime = now;
+
             const t = clock.getElapsedTime();
-            
-            if (!document.hidden) {
                 // Chart gently revolves
                 chartGroup.rotation.y = t * 0.05;
                 chartGroup.rotation.x = Math.sin(t * 0.1) * 0.1;
@@ -346,9 +393,37 @@
                 scatterGeo.attributes.position.needsUpdate = true;
 
                 renderer.render(scene, camera);
+        }
+
+        function stopThreeLoop() {
+            if (threeRaf) {
+                cancelAnimationFrame(threeRaf);
+                threeRaf = null;
+            }
+            if (isThreeRunning) {
+                clock.stop();
+                isThreeRunning = false;
             }
         }
-        animate();
+
+        function startThreeLoop() {
+            if (threeRaf || document.hidden || !isHeroVisible) return;
+            if (!isThreeRunning) {
+                clock.start();
+                isThreeRunning = true;
+            }
+            lastThreeFrameTime = 0;
+            threeRaf = requestAnimationFrame(animate);
+        }
+
+        function syncThreeLoop() {
+            if (document.hidden || !isHeroVisible) stopThreeLoop();
+            else startThreeLoop();
+        }
+
+        document.addEventListener('visibilitychange', syncThreeLoop);
+        window.addEventListener('pagehide', stopThreeLoop);
+        syncThreeLoop();
         
         // Add fade up entrance CSS trigger
         setTimeout(() => canvasContainer.style.opacity = 1, 400);
@@ -440,40 +515,72 @@
     // =============================================
     const timeline = document.querySelector('.timeline');
     const timelineFill = document.getElementById('timelineProgress');
+    let timelineMetrics = null;
+
+    function buildTimelineMetrics() {
+        if (!timeline) {
+            timelineMetrics = null;
+            return;
+        }
+
+        timelineMetrics = {
+            top: timeline.offsetTop,
+            height: timeline.offsetHeight
+        };
+    }
+    buildTimelineMetrics();
 
     // =============================================
     // MAGNETIC — Contact card icons
     // =============================================
-    document.querySelectorAll('.contact-card').forEach(card => {
-        let rect;
-        card.addEventListener('mouseenter', () => { rect = card.getBoundingClientRect(); });
-        
-        card.addEventListener('mousemove', (e) => {
-            if (!rect) return;
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
+    if (allowsMotion && isFinePointer) {
+        document.querySelectorAll('.contact-card').forEach(card => {
+            let rect;
+            let magneticRaf = null;
+            let pointerX = 0;
+            let pointerY = 0;
             const svg = card.querySelector('svg');
-            if (svg) {
-                requestAnimationFrame(() => {
-                    svg.style.transform = `translate(${x * 0.12}px, ${y * 0.12}px) scale(1.12)`;
-                });
-            }
-        });
 
-        card.addEventListener('mouseleave', () => {
-            rect = null;
-            const svg = card.querySelector('svg');
-            if (svg) requestAnimationFrame(() => svg.style.transform = '');
+            function renderMagnetic() {
+                magneticRaf = null;
+                if (!rect || !svg) return;
+
+                const x = pointerX - rect.left - rect.width / 2;
+                const y = pointerY - rect.top - rect.height / 2;
+                svg.style.transform = `translate(${x * 0.12}px, ${y * 0.12}px) scale(1.12)`;
+            }
+
+            card.addEventListener('pointerenter', () => {
+                rect = card.getBoundingClientRect();
+            });
+            
+            card.addEventListener('pointermove', (e) => {
+                if (!rect || !svg) return;
+                pointerX = e.clientX;
+                pointerY = e.clientY;
+                if (!magneticRaf) magneticRaf = requestAnimationFrame(renderMagnetic);
+            }, { passive: true });
+
+            card.addEventListener('pointerleave', () => {
+                rect = null;
+                if (magneticRaf) {
+                    cancelAnimationFrame(magneticRaf);
+                    magneticRaf = null;
+                }
+                if (svg) svg.style.transform = '';
+            });
         });
-    });
+    }
 
 
     // =============================================
     // ICON FLOAT — About cards
     // =============================================
-    document.querySelectorAll('.about-card-icon').forEach((icon, i) => {
-        icon.style.animation = `iconFloat 3.5s ease-in-out ${i * 0.4}s infinite`;
-    });
+    if (allowsMotion) {
+        document.querySelectorAll('.about-card-icon').forEach((icon, i) => {
+            icon.style.animation = `iconFloat 3.5s ease-in-out ${i * 0.4}s infinite`;
+        });
+    }
 
     const floatStyle = document.createElement('style');
     floatStyle.textContent = `@keyframes iconFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }`;
@@ -484,8 +591,39 @@
     // ACTIVE NAV HIGHLIGHT
     // =============================================
     const sections = document.querySelectorAll('section[id]');
+    const navLinkEls = document.querySelectorAll('.nav-link');
 
-    // Note: Scroll listener for active link moved to single handler
+    // Pre-cache section positions to avoid layout reads in scroll handler
+    let sectionCache = [];
+    let sectionCacheFrame = null;
+    function buildSectionCache() {
+        sectionCache = Array.from(sections).map(section => ({
+            id: section.getAttribute('id'),
+            top: section.offsetTop,
+            bottom: section.offsetTop + section.offsetHeight
+        }));
+    }
+    function scheduleSectionCacheBuild() {
+        if (sectionCacheFrame) return;
+        sectionCacheFrame = requestAnimationFrame(() => {
+            sectionCacheFrame = null;
+            buildSectionCache();
+            buildTimelineMetrics();
+        });
+    }
+    buildSectionCache();
+    // Rebuild when layout can legitimately shift after first paint.
+    window.addEventListener('resize', scheduleSectionCacheBuild, { passive: true });
+    window.addEventListener('load', scheduleSectionCacheBuild);
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(scheduleSectionCacheBuild).catch(() => {});
+    }
+    if (window.ResizeObserver) {
+        const sectionResizeObserver = new ResizeObserver(() => {
+            scheduleSectionCacheBuild();
+        });
+        sections.forEach(section => sectionResizeObserver.observe(section));
+    }
 
     // =============================================
     // SCROLL PROGRESS
@@ -588,25 +726,88 @@
     twElements.forEach(el => {
         const text = el.getAttribute('data-text');
         if (!text) return;
-        el.innerHTML = '';
+        if (!allowsMotion) {
+            el.textContent = text;
+            return;
+        }
+
+        el.textContent = '';
         
         setTimeout(() => {
-            let i = 0;
-            const typingInterval = setInterval(() => {
-                if (i < text.length) {
-                    el.innerHTML += text.charAt(i);
-                    i++;
-                } else {
-                    clearInterval(typingInterval);
+            const start = performance.now();
+            const charDuration = 45;
+
+            function typeFrame(now) {
+                const nextLength = Math.min(text.length, Math.floor((now - start) / charDuration));
+                if (el.textContent.length !== nextLength) {
+                    el.textContent = text.slice(0, nextLength);
+                    scheduleSectionCacheBuild();
                 }
-            }, 60);
+
+                if (nextLength < text.length) requestAnimationFrame(typeFrame);
+            }
+
+            requestAnimationFrame(typeFrame);
         }, 600); // Start typing shortly after fade-in
     });
 
     // =============================================
     // GLOBAL OPTIMIZED SCROLL HANDLER
     // =============================================
-    let isScrolling = false;
+    let scrollFrame = null;
+    function applyScrollState() {
+        scrollFrame = null;
+        const scrollY = window.scrollY;
+        
+        nav.classList.toggle('scrolled', scrollY > 50);
+        
+        const pos = scrollY + 200;
+        let activeId = null;
+        for (let i = 0; i < sectionCache.length; i++) {
+            if (pos >= sectionCache[i].top && pos < sectionCache[i].bottom) {
+                activeId = sectionCache[i].id;
+                break;
+            }
+        }
+        if (activeId) {
+            navLinkEls.forEach(link => {
+                link.classList.toggle('active', link.getAttribute('href') === `#${activeId}`);
+            });
+        }
+
+        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollProgressValue = totalHeight > 0 ? (scrollY / totalHeight) : 0;
+        if (scrollProgress) {
+            scrollProgress.style.transform = `scaleX(${Math.min(Math.max(scrollProgressValue, 0), 1)})`;
+        }
+
+        if (scrollIndicator) {
+            scrollIndicator.classList.toggle('hidden', scrollY > totalHeight - 150);
+        }
+
+        if (timelineFill && timelineMetrics) {
+            const startDist = (timelineMetrics.top - scrollY) - (window.innerHeight * 0.5);
+            const endDist = timelineMetrics.height || 1;
+            const progress = startDist < 0
+                ? Math.min(Math.max(Math.abs(startDist) / endDist, 0), 1)
+                : 0;
+            timelineFill.style.transform = `scaleY(${progress})`;
+        }
+
+        if (backToTop) {
+            backToTop.classList.toggle('visible', scrollY > 500);
+        }
+    }
+
+    window.addEventListener('scroll', () => {
+        if (!scrollFrame) scrollFrame = window.requestAnimationFrame(applyScrollState);
+    }, { passive: true });
+    window.addEventListener('resize', () => {
+        if (!scrollFrame) scrollFrame = window.requestAnimationFrame(applyScrollState);
+    }, { passive: true });
+    applyScrollState();
+
+    let isScrolling = true;
     window.addEventListener('scroll', () => {
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
@@ -615,18 +816,20 @@
                 // 1. Nav shadow
                 nav.classList.toggle('scrolled', scrollY > 50);
                 
-                // 2. Active Section Highlight
+                // 2. Active Section Highlight (uses pre-cached values — no layout reads)
                 const pos = scrollY + 200;
-                sections.forEach(section => {
-                    const top = section.offsetTop;
-                    const h = section.offsetHeight;
-                    if (pos >= top && pos < top + h) {
-                        const id = section.getAttribute('id');
-                        document.querySelectorAll('.nav-link').forEach(link => {
-                            link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
-                        });
+                let activeId = null;
+                for (let i = 0; i < sectionCache.length; i++) {
+                    if (pos >= sectionCache[i].top && pos < sectionCache[i].bottom) {
+                        activeId = sectionCache[i].id;
+                        break;
                     }
-                });
+                }
+                if (activeId) {
+                    navLinkEls.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${activeId}`);
+                    });
+                }
 
                 // 3. Scroll Progress Bar
                 const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
