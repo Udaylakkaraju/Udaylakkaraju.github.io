@@ -9,10 +9,6 @@
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const allowsMotion = !prefersReducedMotion.matches;
     const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const isLowPowerDevice = (
-        (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
-        (navigator.deviceMemory && navigator.deviceMemory <= 4)
-    );
 
     // =============================================
     // DARK MODE TOGGLE
@@ -72,9 +68,10 @@
                 return;
             }
 
-            glowX += dx * 0.1;
-            glowY += dy * 0.1;
-            cursorGlow.style.transform = `translate3d(${glowX - 225}px, ${glowY - 225}px, 0)`;
+            glowX += dx * 0.06;
+            glowY += dy * 0.06;
+            cursorGlow.style.left = glowX + 'px';
+            cursorGlow.style.top = glowY + 'px';
             glowRaf = requestAnimationFrame(updateGlow);
         }
     } else if (cursorGlow) {
@@ -219,19 +216,14 @@
     // THREE.JS DATA CORE
     // =============================================
     const canvasContainer = document.getElementById('canvas-container');
-    if (canvasContainer && window.THREE && allowsMotion && window.innerWidth > 900) {
-        const maxPixelRatio = isLowPowerDevice ? 1.25 : 1.5;
-        const numParticles = isLowPowerDevice ? 260 : 420;
+    if (canvasContainer && window.THREE && allowsMotion && window.innerWidth > 768) {
+        const numParticles = 600;
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
 
-        const renderer = new THREE.WebGLRenderer({
-            alpha: true,
-            antialias: !isLowPowerDevice,
-            powerPreference: isLowPowerDevice ? 'default' : 'high-performance'
-        });
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         canvasContainer.appendChild(renderer.domElement);
 
         // Scale up camera slightly to fit the bigger elements without cutting the ring off the viewport
@@ -347,9 +339,6 @@
         let isHeroVisible = true;
         let threeRaf = null;
         let isThreeRunning = false;
-        const minThreeFrameInterval = isLowPowerDevice ? (1000 / 48) : 0;
-        let lastThreeFrameTime = 0;
-        
         const heroSection = document.getElementById('hero');
         const heroObserver = new IntersectionObserver(([e]) => {
             isHeroVisible = e.isIntersecting;
@@ -357,11 +346,8 @@
         }, { threshold: 0.1 });
         heroObserver.observe(heroSection);
 
-        function animate(now) {
+        function animate() {
             threeRaf = requestAnimationFrame(animate);
-            if (minThreeFrameInterval && now - lastThreeFrameTime < minThreeFrameInterval) return;
-            lastThreeFrameTime = now;
-
             const t = clock.getElapsedTime();
                 // Chart gently revolves
                 chartGroup.rotation.y = t * 0.05;
@@ -412,7 +398,6 @@
                 clock.start();
                 isThreeRunning = true;
             }
-            lastThreeFrameTime = 0;
             threeRaf = requestAnimationFrame(animate);
         }
 
@@ -807,70 +792,5 @@
     }, { passive: true });
     applyScrollState();
 
-    let isScrolling = true;
-    window.addEventListener('scroll', () => {
-        if (!isScrolling) {
-            window.requestAnimationFrame(() => {
-                const scrollY = window.scrollY;
-                
-                // 1. Nav shadow
-                nav.classList.toggle('scrolled', scrollY > 50);
-                
-                // 2. Active Section Highlight (uses pre-cached values — no layout reads)
-                const pos = scrollY + 200;
-                let activeId = null;
-                for (let i = 0; i < sectionCache.length; i++) {
-                    if (pos >= sectionCache[i].top && pos < sectionCache[i].bottom) {
-                        activeId = sectionCache[i].id;
-                        break;
-                    }
-                }
-                if (activeId) {
-                    navLinkEls.forEach(link => {
-                        link.classList.toggle('active', link.getAttribute('href') === `#${activeId}`);
-                    });
-                }
-
-                // 3. Scroll Progress Bar
-                const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-                if (scrollProgress) {
-                    scrollProgress.style.width = (scrollY / totalHeight) * 100 + '%';
-                }
-
-                // 3.5 Hide Scroll Indicator at bottom
-                if (scrollIndicator) {
-                    if (scrollY > totalHeight - 150) {
-                        scrollIndicator.classList.add('hidden');
-                    } else {
-                        scrollIndicator.classList.remove('hidden');
-                    }
-                }
-
-                // 4. Timeline Draw-On Progress
-                if (timeline && timelineFill) {
-                    const rect = timeline.getBoundingClientRect();
-                    const startDist = rect.top - (window.innerHeight * 0.5);
-                    const endDist = rect.height;
-                    
-                    if (startDist < 0) {
-                        let progress = Math.abs(startDist) / endDist;
-                        progress = Math.min(Math.max(progress, 0), 1);
-                        timelineFill.style.height = `${progress * 100}%`;
-                    } else {
-                        timelineFill.style.height = '0%';
-                    }
-                }
-
-                // 5. Back to Top visibility
-                if (backToTop) {
-                    if (scrollY > 500) backToTop.classList.add('visible');
-                    else backToTop.classList.remove('visible');
-                }
-
-                isScrolling = false;
-            });
-            isScrolling = true;
-        }
-    }, { passive: true });
-
 })();
+
