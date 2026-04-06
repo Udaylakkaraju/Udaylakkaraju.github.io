@@ -235,6 +235,9 @@
      }
  }
 
+ /* Background styling */
+
+ /* Subtle noise texture */
  body::after {
      content: '';
      position: fixed;
@@ -246,6 +249,7 @@
      background-repeat: repeat;
  }
 
+ /* Cursor glow */
  .cursor-glow {
      position: fixed;
      width: 450px;
@@ -427,7 +431,7 @@
      display: flex;
      flex-direction: column;
      width: 100%;
-     max-width: 650px;
+     max-width: 650px; /* Keep text readable on the left */
      margin: 0;
      padding-right: 20px;
  }
@@ -576,6 +580,7 @@
      background: var(--surface-hover);
  }
 
+ /* Hero stats */
  .hero-stats {
      display: flex;
      gap: 32px;
@@ -589,7 +594,7 @@
      height: 100%;
      z-index: 0;
      opacity: 0;
-     pointer-events: none;
+     pointer-events: none; /* Let user interact with buttons behind/through it */
      transition: opacity 0.8s ease-in-out;
  }
 
@@ -628,11 +633,15 @@
      background: rgba(0, 0, 0, 0.08);
  }
 
+ /* Dashboard mock */
  .hero-visual {
      z-index: 1;
  }
 
- .scroll-indicator {
+ /* Old Dashboard Mock Removed */
+
+ /* Scroll indicator */
+  .scroll-indicator {
       position: fixed;
       bottom: 40px;
       left: 40px;
@@ -993,28 +1002,27 @@
      grid-template-columns: repeat(4, 1fr);
      grid-auto-rows: 220px;
      gap: 18px;
-     contain: layout;
  }
 
   .bento-card {
       background: var(--glass);
       backdrop-filter: blur(16px);
       border: none; /* Removed border to fix visual lines bug */
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-up);
-      overflow: hidden;
-      transition: transform 0.5s var(--ease-spring), opacity 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-spring), filter 0.5s var(--ease-spring), background 0.5s var(--ease-spring), color 0.5s var(--ease-spring);
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-      position: relative;
-      will-change: transform;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      transform: translateZ(0);
+     border-radius: var(--radius);
+     box-shadow: var(--shadow-up);
+     overflow: hidden;
+     transition: transform 0.5s var(--ease-spring), opacity 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-spring), filter 0.5s var(--ease-spring), background 0.5s var(--ease-spring), color 0.5s var(--ease-spring);
+     display: flex;
+     flex-direction: column;
+     cursor: pointer;
+     position: relative;
+     will-change: transform;
+     backface-visibility: hidden;
+     -webkit-backface-visibility: hidden;
+     transform: translateZ(0);
  }
 
-.live-metric {
+ .live-metric {
      position: absolute;
      bottom: 15px;
      right: 15px;
@@ -1146,7 +1154,7 @@
      font-weight: 700;
      border: 1px solid rgba(255, 255, 255, 0.1);
      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
-     transition: background 0.3s var(--ease-out), transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+     transition: all 0.3s var(--ease-out);
      margin-top: auto;
      width: fit-content;
  }
@@ -1194,7 +1202,6 @@
  .timeline {
      position: relative;
      padding-left: 40px;
-     contain: layout;
  }
  
  .timeline-progress-bar {
@@ -1213,12 +1220,9 @@
      top: 0;
      left: 0;
      width: 100%;
-     height: 100%;
+     height: 0%; /* Will be animated by JS on scroll */
      background: var(--accent);
      border-radius: 2px;
-     transform: scaleY(0);
-     transform-origin: center top;
-     will-change: transform;
  }
 
  .timeline-item {
@@ -1336,7 +1340,7 @@
      background: var(--surface-hover);
  }
 
-.contact-card .contact-icon-wrap {
+ .contact-card .contact-icon-wrap {
      width: 52px;
      height: 52px;
      border-radius: 14px;
@@ -1689,12 +1693,10 @@
      top: 0;
      left: 0;
      height: 3px;
-     width: 100%;
+     width: 0%;
      background: linear-gradient(90deg, var(--accent), var(--teal), var(--coral));
      z-index: 9999;
-     transform: scaleX(0);
-     transform-origin: left center;
-     will-change: transform;
+     transition: width 0.15s ease-out;
  }
 
  /* ============================================
@@ -1836,17 +1838,3 @@
          padding: 30px 24px;
      }
  }
-
-  /* Respect system-level reduced motion preference */
-  @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-          animation-duration: 0.01ms !important;
-          animation-iteration-count: 1 !important;
-          transition-duration: 0.01ms !important;
-      }
-      .morph-blob {
-          animation: none !important;
-      }
-  }
