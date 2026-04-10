@@ -9,13 +9,13 @@
     <meta property="og:title" content="Uday Prakash Lakkaraju | Data Analyst & BI Portfolio">
     <meta property="og:description" content="MS Information Systems @ Stevens Institute of Technology. Turning raw data into actionable business insights through SQL, Python, Power BI, and Tableau.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="og-image.png">
+    <meta property="og:image" content="/og-image.png">
     <meta property="og:image:alt" content="Preview image for Uday Prakash Lakkaraju's data analyst portfolio">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Uday Prakash Lakkaraju | Data Analyst & BI Portfolio">
     <meta name="twitter:description" content="MS Information Systems @ Stevens Institute of Technology. Turning raw data into actionable business insights through SQL, Python, Power BI, and Tableau.">
-    <meta name="twitter:image" content="og-image.png">
+    <meta name="twitter:image" content="/og-image.png">
     <meta name="twitter:image:alt" content="Preview image for Uday Prakash Lakkaraju's data analyst portfolio">
 
     <title>Uday Prakash Lakkaraju | Data Analyst & BI Portfolio</title>
@@ -26,8 +26,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     
-    <!-- Three.js Library -->
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <!-- Scroll Progress Indicator -->
@@ -47,7 +45,7 @@
     <!-- Navigation -->
     <!-- Navigation -->
     <nav class="nav" id="nav">
-        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" style="margin-right: auto;">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" style="margin-right: auto;">
             <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
             <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         </button>
@@ -58,7 +56,7 @@
             <a href="#experience" class="nav-link">Experience</a>
             <a href="#contact" class="nav-link nav-link--cta">Let's Connect</a>
         </div>
-        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle navigation">
             <span></span>
             <span></span>
             <span></span>
@@ -67,15 +65,11 @@
 
     <!-- Hero Section -->
     <section class="hero" id="hero">
-        <div id="canvas-container" class="hero-canvas-container"></div>
         <div class="hero-inner">
             <div class="hero-content">
                 <h1 class="hero-title">
-                    <span class="hero-line">Hi, I'm</span>
-                    <span style="display: flex; align-items: center; gap: 15px;">
-                        <span class="badge-dot"></span>
-                        <span class="hero-line hero-line--accent hero-name-bounce">Uday Prakash Lakkaraju</span>
-                    </span>
+                    <span class="hero-line">Hi, I’m</span>
+                    <span class="hero-line hero-line--accent hero-name-bounce">Uday Prakash Lakkaraju</span>
                 </h1>
                 <p class="hero-description">MS Information Systems candidate, graduating May 2026.</p>
                 <div class="career-summary-card">
@@ -112,10 +106,10 @@
                 <p class="section-subtitle">A selection of projects showcasing my analytical skills and problem-solving approach.</p>
             </div>
             <div class="project-filters" data-reveal>
-                <button class="project-filter-btn active" data-filter="all" aria-pressed="true">All</button>
-                <button class="project-filter-btn" data-filter="python" aria-pressed="false">Python</button>
-                <button class="project-filter-btn" data-filter="sql" aria-pressed="false">SQL</button>
-                <button class="project-filter-btn" data-filter="bi" aria-pressed="false">BI</button>
+                <button class="project-filter-btn active" type="button" data-filter="all" aria-pressed="true">All</button>
+                <button class="project-filter-btn" type="button" data-filter="python" aria-pressed="false">Python</button>
+                <button class="project-filter-btn" type="button" data-filter="sql" aria-pressed="false">SQL</button>
+                <button class="project-filter-btn" type="button" data-filter="bi" aria-pressed="false">BI</button>
             </div>
             <div class="bento-grid">
                 <!-- Large featured card -->
@@ -233,9 +227,9 @@
                 <p class="section-subtitle">Interactive dashboards from my portfolio projects.</p>
             </div>
             <div class="dashboard-switcher" data-reveal>
-                <button class="dashboard-switch-btn active" data-dashboard="fraud" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no" data-title="Fraud Risk Dashboard" aria-pressed="true">Fraud Risk</button>
-                <button class="dashboard-switch-btn" data-dashboard="chd" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Stocks?showVizHome=no" data-title="CHD Risk Dashboard" aria-pressed="false">CHD Risk</button>
-                <button class="dashboard-switch-btn" data-dashboard="fintech" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no" data-title="Fintech Payments Dashboard" aria-pressed="false">Fintech Ops</button>
+                <button class="dashboard-switch-btn active" type="button" data-dashboard="fraud" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no" data-title="Fraud Risk Dashboard" aria-pressed="true">Fraud Risk</button>
+                <button class="dashboard-switch-btn" type="button" data-dashboard="chd" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Stocks?showVizHome=no" data-title="CHD Risk Dashboard" aria-pressed="false">CHD Risk</button>
+                <button class="dashboard-switch-btn" type="button" data-dashboard="fintech" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no" data-title="Fintech Payments Dashboard" aria-pressed="false">Fintech Ops</button>
             </div>
             <div class="dashboard-frame-wrap" data-reveal>
                 <iframe
@@ -511,9 +505,9 @@
     </a>
 
     <!-- Project Modal Overlay -->
-    <div class="project-modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="modalBody">
+    <div class="project-modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-label="Project details">
         <div class="project-modal-content">
-            <button class="project-modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+            <button class="project-modal-close" id="modalClose" type="button" aria-label="Close modal">&times;</button>
             <div class="project-modal-body" id="modalBody"></div>
         </div>
     </div>
