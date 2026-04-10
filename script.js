@@ -40,12 +40,16 @@
     let glowX = 0, glowY = 0, targetX = 0, targetY = 0;
     let glowRaf = 0;
     let lastGlowFrameTime = 0;
+    let glowVisible = false;
 
     if (cursorGlow && finePointer && !prefersReducedMotion) {
         document.addEventListener('mousemove', (e) => {
             targetX = e.clientX;
             targetY = e.clientY;
-            cursorGlow.style.opacity = '1';
+            if (!glowVisible) {
+                cursorGlow.style.opacity = '1';
+                glowVisible = true;
+            }
             
             // Start loop if not running
             if (!glowRaf) {
@@ -55,7 +59,9 @@
         }, { passive: true });
 
         document.addEventListener('mouseleave', () => {
+            if (!glowVisible) return;
             cursorGlow.style.opacity = '0';
+            glowVisible = false;
         });
     } else if (cursorGlow) {
         cursorGlow.style.display = 'none';
@@ -81,8 +87,7 @@
         glowX += dx * 0.06;
         glowY += dy * 0.06;
         if (cursorGlow) {
-            cursorGlow.style.left = glowX + 'px';
-            cursorGlow.style.top = glowY + 'px';
+            cursorGlow.style.transform = `translate3d(${glowX}px, ${glowY}px, 0) translate(-50%, -50%)`;
         }
         glowRaf = requestAnimationFrame(updateGlow);
     }
@@ -153,6 +158,9 @@
                     const isMatch = filter === 'all' || categories.includes(filter);
                     card.classList.toggle('is-hidden', !isMatch);
                 });
+
+                // Filtering changes document flow; refresh cached scroll math.
+                refreshLayoutMetrics();
             });
         });
     }
@@ -263,215 +271,6 @@
             });
         });
         });
-    }
-
-
-    // =============================================
-    // THREE.JS DATA CORE
-    // =============================================
-    const canvasContainer = document.getElementById('canvas-container');
-    if (canvasContainer && window.THREE) {
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
-
-        const renderer = new THREE.WebGLRenderer({
-            alpha: true,
-            antialias: !isMobile,
-            powerPreference: 'high-performance'
-        });
-        renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
-        canvasContainer.appendChild(renderer.domElement);
-
-        // Scale up camera slightly to fit the bigger elements without cutting the ring off the viewport
-        camera.position.z = 10.5;
-
-        // 3D Animated Scatter Plot (Data Clustered Graph)
-        const chartGroup = new THREE.Group();
-
-        // 4 distinct data cluster categories with high-contrast UI colors
-        const clusters = [
-            { color: new THREE.Color(0xfd79a8), center: new THREE.Vector3(-2, 2, -2) }, // Neon Coral
-            { color: new THREE.Color(0x00cec9), center: new THREE.Vector3(2, -2, 2) }, // Cyber Teal
-            { color: new THREE.Color(0x6c5ce7), center: new THREE.Vector3(3, 2, -1) }, // Brand Purple
-            { color: new THREE.Color(0xfdcb6e), center: new THREE.Vector3(-2, -2, 2) } // Electric Yellow
-        ];
-
-        const numParticles = window.innerWidth < 768 ? 180 : 380;
-        const positions = new Float32Array(numParticles * 3);
-        const colors = new Float32Array(numParticles * 3);
-        const particleData = [];
-
-        for (let i = 0; i < numParticles; i++) {
-            // Assign to random cluster
-            const clusterIndex = Math.floor(Math.random() * clusters.length);
-            const cluster = clusters[clusterIndex];
-
-            // Random offset from cluster center (creates the dense "cloud/cluster" look)
-            const r = Math.random() * 2.8; 
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos((Math.random() * 2) - 1);
-            
-            const offsetX = r * Math.sin(phi) * Math.cos(theta);
-            const offsetY = r * Math.sin(phi) * Math.sin(theta);
-            const offsetZ = r * Math.cos(phi);
-
-            positions[i*3] = cluster.center.x + offsetX;
-            positions[i*3+1] = cluster.center.y + offsetY;
-            positions[i*3+2] = cluster.center.z + offsetZ;
-
-            colors[i*3] = cluster.color.r;
-            colors[i*3+1] = cluster.color.g;
-            colors[i*3+2] = cluster.color.b;
-
-            // Store orbital logic data
-            particleData.push({
-                clusterIndex: clusterIndex,
-                offsetX: offsetX,
-                offsetY: offsetY,
-                offsetZ: offsetZ,
-                speed: 0.15 + Math.random() * 0.6,
-                angle: Math.random() * Math.PI * 2
-            });
-        }
-
-        const scatterGeo = new THREE.BufferGeometry();
-        scatterGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        scatterGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-        // Draw glowing circular sprites 
-        const circleCanvas = document.createElement('canvas');
-        circleCanvas.width = 32; circleCanvas.height = 32;
-        const ctx = circleCanvas.getContext('2d');
-        ctx.beginPath();
-        ctx.arc(16, 16, 14, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-        const circleTexture = new THREE.CanvasTexture(circleCanvas);
-
-        // High contrast glowing material
-        const scatterMat = new THREE.PointsMaterial({
-            size: 0.22, // Size boosted slightly to punch through the void
-            map: circleTexture,
-            transparent: true,
-            opacity: 0.9,
-            vertexColors: true,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-
-        const pointCloud = new THREE.Points(scatterGeo, scatterMat);
-        chartGroup.add(pointCloud);
-
-        // --- OPTION 3: THE SOFT DATA FLOOR (GRID WITH RADIAL FADE) ---
-        const gridHelper = new THREE.GridHelper(50, 50, 0x6c5ce7, 0x4a4a4a);
-        gridHelper.material.transparent = true;
-        gridHelper.material.opacity = 0.05;
-        gridHelper.position.y = -3.5;
-        
-        // Add a secondary pulsing glow on the center of the grid for depth
-        const gridGlowGeo = new THREE.PlaneGeometry(60, 60);
-        const gridGlowMat = new THREE.MeshBasicMaterial({
-            color: 0x6c5ce7,
-            transparent: true,
-            opacity: 0.03,
-            side: THREE.DoubleSide
-        });
-        const gridGlow = new THREE.Mesh(gridGlowGeo, gridGlowMat);
-        gridGlow.rotation.x = Math.PI / 2;
-        gridGlow.position.y = -3.51; 
-        chartGroup.add(gridGlow);
-
-        chartGroup.add(gridHelper);
-
-        scene.add(chartGroup);
-
-        window.addEventListener('resize', () => {
-            if (!canvasContainer) return;
-            camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        });
-
-        let heroInView = true;
-        const heroHost = document.getElementById('hero');
-
-        const clock = new THREE.Clock();
-        let lastRenderTime = 0;
-        let threeRaf = 0;
-
-        function stopThreeLoop() {
-            if (!threeRaf) return;
-            cancelAnimationFrame(threeRaf);
-            threeRaf = 0;
-        }
-
-        function runThreeLoop() {
-            if (threeRaf || !heroInView || document.hidden) return;
-            clock.getDelta(); // Reset long idle delta before resuming.
-            threeRaf = requestAnimationFrame(animate);
-        }
-
-        function animate() {
-            if (!heroInView || document.hidden) {
-                threeRaf = 0;
-                return;
-            }
-            threeRaf = requestAnimationFrame(animate);
-            const t = clock.getElapsedTime();
-            if (t - lastRenderTime < (1 / 45)) return;
-            lastRenderTime = t;
-
-            // Chart gently revolves
-            chartGroup.rotation.y = t * 0.05;
-            chartGroup.rotation.x = Math.sin(t * 0.1) * 0.1;
-
-            // Animate particles organically orbiting inside their data clusters
-            const pos = scatterGeo.attributes.position.array;
-            
-            for (let i = 0; i < numParticles; i++) {
-                const pData = particleData[i];
-                pData.angle += pData.speed * 0.02;
-
-                const clusterCenter = clusters[pData.clusterIndex].center;
-
-                // Wobble the offset to make the cluster cloud look alive and fluid
-                const currentOffsetX = pData.offsetX * Math.cos(pData.angle) + pData.offsetZ * Math.sin(pData.angle);
-                const currentOffsetZ = pData.offsetZ * Math.cos(pData.angle) - pData.offsetX * Math.sin(pData.angle);
-                const currentOffsetY = pData.offsetY + Math.sin(pData.angle * 2) * 0.2;
-
-                pos[i * 3] = clusterCenter.x + currentOffsetX;
-                pos[i * 3 + 1] = clusterCenter.y + currentOffsetY;
-                pos[i * 3 + 2] = clusterCenter.z + currentOffsetZ;
-            }
-            
-            // Subtle pulse on the grid surface
-            gridHelper.material.opacity = 0.05 + Math.sin(t * 0.5) * 0.02;
-
-            // Finalize geometry updates
-            scatterGeo.attributes.position.needsUpdate = true;
-
-            renderer.render(scene, camera);
-        }
-        if (heroHost) {
-            const heroObs = new IntersectionObserver((entries) => {
-                heroInView = entries.some(entry => entry.isIntersecting);
-                if (heroInView) runThreeLoop();
-                else stopThreeLoop();
-            }, { threshold: 0.02 });
-            heroObs.observe(heroHost);
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) stopThreeLoop();
-            else runThreeLoop();
-        }, { passive: true });
-
-        runThreeLoop();
-        
-        // Add fade up entrance CSS trigger
-        setTimeout(() => canvasContainer.style.opacity = 1, 400);
     }
 
 
@@ -599,9 +398,6 @@
     // =============================================
     const scrollProgress = document.getElementById('scrollProgress');
     const scrollIndicator = document.querySelector('.scroll-indicator');
-    if (scrollProgress) {
-        // Note: moved to unified handler
-    }
 
     // =============================================
     // CONTACT FORM (FORMSPREE)
@@ -862,13 +658,27 @@
     // GLOBAL OPTIMIZED SCROLL HANDLER
     // =============================================
     let isScrolling = false;
+    let navIsScrolled = false;
+    let indicatorHidden = false;
+    let backToTopVisible = false;
+    let lastProgressWidth = -1;
+    let lastTimelineProgress = -1;
+    let lastHeroTransform = '';
+    let lastHeroOpacity = '';
+    const heroParallaxEnabled = !prefersReducedMotion && heroSection && heroInner;
     window.addEventListener('scroll', () => {
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
                 const scrollY = window.scrollY;
                 
                 // 1. Nav shadow
-                if (nav) nav.classList.toggle('scrolled', scrollY > 50);
+                if (nav) {
+                    const shouldScrollNav = scrollY > 50;
+                    if (shouldScrollNav !== navIsScrolled) {
+                        nav.classList.toggle('scrolled', shouldScrollNav);
+                        navIsScrolled = shouldScrollNav;
+                    }
+                }
                 
                 // 2. Active Section Highlight
                 const pos = scrollY + 200;
@@ -886,16 +696,19 @@
 
                 // 3. Scroll Progress Bar
                 if (scrollProgress) {
-                    const progress = (scrollY / totalScrollableHeight) * 100;
-                    scrollProgress.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
+                    const progress = Math.min(Math.max((scrollY / totalScrollableHeight) * 100, 0), 100);
+                    if (Math.abs(progress - lastProgressWidth) > 0.2) {
+                        scrollProgress.style.width = `${progress}%`;
+                        lastProgressWidth = progress;
+                    }
                 }
 
                 // 3.5 Hide Scroll Indicator at bottom
                 if (scrollIndicator) {
-                    if (scrollY > totalScrollableHeight - 150) {
-                        scrollIndicator.classList.add('hidden');
-                    } else {
-                        scrollIndicator.classList.remove('hidden');
+                    const shouldHideIndicator = scrollY > totalScrollableHeight - 150;
+                    if (shouldHideIndicator !== indicatorHidden) {
+                        scrollIndicator.classList.toggle('hidden', shouldHideIndicator);
+                        indicatorHidden = shouldHideIndicator;
                     }
                 }
 
@@ -904,23 +717,41 @@
                     const viewportAnchor = scrollY + (window.innerHeight * 0.5);
                     const rawProgress = (viewportAnchor - timelineTop) / timelineHeight;
                     const progress = Math.min(Math.max(rawProgress, 0), 1);
-                    timelineFill.style.transform = `scaleY(${progress})`;
+                    if (Math.abs(progress - lastTimelineProgress) > 0.003) {
+                        timelineFill.style.transform = `scaleY(${progress})`;
+                        lastTimelineProgress = progress;
+                    }
                 }
 
                 // 4.5 Hero scroll parallax
-                if (!prefersReducedMotion && heroSection && heroInner && canvasContainer) {
+                if (heroParallaxEnabled) {
                     if (scrollY <= heroHeightCached * 1.2) {
                         const heroProgress = Math.min(Math.max(scrollY / (heroHeightCached * 0.9), 0), 1);
-                        heroInner.style.transform = `translateY(${heroProgress * 55}px)`;
-                        heroInner.style.opacity = `${1 - (heroProgress * 0.35)}`;
-                        canvasContainer.style.transform = `translateY(${heroProgress * 95}px) scale(${1 - (heroProgress * 0.06)})`;
+                        const nextTransform = `translateY(${heroProgress * 55}px)`;
+                        const nextOpacity = `${1 - (heroProgress * 0.35)}`;
+                        if (nextTransform !== lastHeroTransform) {
+                            heroInner.style.transform = nextTransform;
+                            lastHeroTransform = nextTransform;
+                        }
+                        if (nextOpacity !== lastHeroOpacity) {
+                            heroInner.style.opacity = nextOpacity;
+                            lastHeroOpacity = nextOpacity;
+                        }
+                    } else if (lastHeroTransform || lastHeroOpacity) {
+                        heroInner.style.transform = '';
+                        heroInner.style.opacity = '';
+                        lastHeroTransform = '';
+                        lastHeroOpacity = '';
                     }
                 }
 
                 // 5. Back to Top visibility
                 if (backToTop) {
-                    if (scrollY > 500) backToTop.classList.add('visible');
-                    else backToTop.classList.remove('visible');
+                    const shouldShowBackToTop = scrollY > 500;
+                    if (shouldShowBackToTop !== backToTopVisible) {
+                        backToTop.classList.toggle('visible', shouldShowBackToTop);
+                        backToTopVisible = shouldShowBackToTop;
+                    }
                 }
 
                 isScrolling = false;
