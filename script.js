@@ -6,6 +6,10 @@
 (function () {
     'use strict';
 
+    // Keep motion behavior enabled consistently across sessions.
+    const prefersReducedMotion = false;
+    const finePointer = window.matchMedia('(pointer:fine)').matches;
+
     // =============================================
     // DARK MODE TOGGLE
     // =============================================
@@ -34,28 +38,43 @@
     // =============================================
     const cursorGlow = document.getElementById('cursorGlow');
     let glowX = 0, glowY = 0, targetX = 0, targetY = 0;
-    let glowRaf; // Track requestAnimationFrame
+    let glowRaf = 0;
+    let lastGlowFrameTime = 0;
 
-    document.addEventListener('mousemove', (e) => {
-        targetX = e.clientX;
-        targetY = e.clientY;
-        if (cursorGlow) cursorGlow.style.opacity = '1';
-        
-        // Start loop if not running
-        if (!glowRaf) updateGlow();
-    });
+    if (cursorGlow && finePointer && !prefersReducedMotion) {
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+            cursorGlow.style.opacity = '1';
+            
+            // Start loop if not running
+            if (!glowRaf) {
+                lastGlowFrameTime = performance.now();
+                glowRaf = requestAnimationFrame(updateGlow);
+            }
+        }, { passive: true });
 
-    document.addEventListener('mouseleave', () => {
-        if (cursorGlow) cursorGlow.style.opacity = '0';
-    });
+        document.addEventListener('mouseleave', () => {
+            cursorGlow.style.opacity = '0';
+        });
+    } else if (cursorGlow) {
+        cursorGlow.style.display = 'none';
+    }
 
-    function updateGlow() {
+    function updateGlow(now) {
+        const frameInterval = 1000 / 60;
+        if (now - lastGlowFrameTime < frameInterval) {
+            glowRaf = requestAnimationFrame(updateGlow);
+            return;
+        }
+        lastGlowFrameTime = now;
+
         const dx = targetX - glowX;
         const dy = targetY - glowY;
         
-        // If movement is extremely small, stop looping
-        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
-            glowRaf = null;
+        // If movement is small enough, stop looping.
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+            glowRaf = 0;
             return; 
         }
 
@@ -75,30 +94,68 @@
     const nav = document.getElementById('nav');
     const navToggle = document.getElementById('navToggle');
     const navLinks = document.getElementById('navLinks');
+    const navLinkEls = Array.from(document.querySelectorAll('.nav-link'));
+    const navLinkByTarget = new Map(
+        navLinkEls
+            .filter(link => (link.getAttribute('href') || '').startsWith('#'))
+            .map(link => [link.getAttribute('href'), link])
+    );
 
     // Note: Scroll listener moved to single consolidated handler at the bottom
 
-    navToggle.addEventListener('click', () => {
-        navToggle.classList.toggle('active');
-        navLinks.classList.toggle('open');
-    });
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', () => {
+            navToggle.classList.toggle('active');
+            navLinks.classList.toggle('open');
+        });
+    }
 
-    document.querySelectorAll('.nav-link').forEach(link => {
+    navLinkEls.forEach(link => {
         link.addEventListener('click', () => {
-            navToggle.classList.remove('active');
-            navLinks.classList.remove('open');
+            if (navToggle) navToggle.classList.remove('active');
+            if (navLinks) navLinks.classList.remove('open');
         });
     });
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
+            if (this.matches('[data-dashboard-switch]')) return; // Handled by dashboard switcher logic
             if (href === '#') return; // Ignore empty anchor tags like Back to Top
             e.preventDefault();
-            const t = document.querySelector(href);
-            if (t) window.scrollTo({ top: t.offsetTop - 80, behavior: 'smooth' });
+            const targetId = href.slice(1);
+            const t = targetId ? document.getElementById(targetId) : null;
+            if (t) {
+                const y = t.getBoundingClientRect().top + window.scrollY - 80;
+                window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+            }
         });
     });
+
+    // =============================================
+    // PROJECT FILTER TABS
+    // =============================================
+    const projectFilterButtons = document.querySelectorAll('.project-filter-btn');
+    const projectCards = document.querySelectorAll('.bento-grid .bento-card');
+
+    if (projectFilterButtons.length && projectCards.length) {
+        projectFilterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const filter = button.getAttribute('data-filter');
+
+                projectFilterButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn === button);
+                    btn.setAttribute('aria-pressed', btn === button ? 'true' : 'false');
+                });
+
+                projectCards.forEach(card => {
+                    const categories = (card.getAttribute('data-category') || '').split(' ').filter(Boolean);
+                    const isMatch = filter === 'all' || categories.includes(filter);
+                    card.classList.toggle('is-hidden', !isMatch);
+                });
+            });
+        });
+    }
 
 
     // =============================================
@@ -106,27 +163,37 @@
     // Elements animate in AND out when entering/leaving
     // =============================================
     const revealEls = document.querySelectorAll('[data-reveal]');
-
-    const revealObs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const parent = entry.target.parentElement;
-                const siblings = Array.from(parent.querySelectorAll('[data-reveal]:not(.revealed)'));
-                let delay = 0;
-                siblings.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.top < window.innerHeight + 60) {
-                        setTimeout(() => el.classList.add('revealed'), delay);
-                        delay += 90;
-                    }
-                });
-            } else {
-                entry.target.classList.remove('revealed');
-            }
+    if (prefersReducedMotion) {
+        revealEls.forEach(el => {
+            el.classList.add('revealed');
+            el.classList.remove('reveal-pop');
         });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    } else {
+        const revealTimers = new WeakMap();
+        const revealObs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const el = entry.target;
+                if (entry.isIntersecting) {
+                    el.classList.add('revealed');
+                    if (!el.classList.contains('reveal-pop')) {
+                        el.classList.add('reveal-pop');
+                        const activeTimer = revealTimers.get(el);
+                        if (activeTimer) clearTimeout(activeTimer);
+                        const timerId = setTimeout(() => {
+                            el.classList.remove('reveal-pop');
+                            revealTimers.delete(el);
+                        }, 1100);
+                        revealTimers.set(el, timerId);
+                    }
+                } else {
+                    // Reset visibility state so animation can replay on re-entry.
+                    el.classList.remove('revealed', 'reveal-pop');
+                }
+            });
+        }, { threshold: 0.06, rootMargin: '0px 0px -20px 0px' });
 
-    revealEls.forEach(el => revealObs.observe(el));
+        revealEls.forEach(el => revealObs.observe(el));
+    }
 
 
     // =============================================
@@ -139,31 +206,40 @@
         ).join(' ');
     });
 
-    const titleObs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            const wraps = entry.target.querySelectorAll('.word-wrap');
-            if (entry.isIntersecting) {
-                wraps.forEach(w => { w.style.transform = 'translateY(0)'; w.style.opacity = '1'; });
-            } else {
-                wraps.forEach(w => { w.style.transform = 'translateY(100%)'; w.style.opacity = '0'; });
-            }
+    if (prefersReducedMotion) {
+        document.querySelectorAll('.section-title .word-wrap').forEach(w => {
+            w.style.transform = 'translateY(0)';
+            w.style.opacity = '1';
         });
-    }, { threshold: 0.3 });
+    } else {
+        const titleObs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const wraps = entry.target.querySelectorAll('.word-wrap');
+                if (entry.isIntersecting) {
+                    wraps.forEach(w => { w.style.transform = 'translateY(0)'; w.style.opacity = '1'; });
+                } else {
+                    wraps.forEach(w => { w.style.transform = 'translateY(100%)'; w.style.opacity = '0'; });
+                }
+            });
+        }, { threshold: 0.3 });
 
-    document.querySelectorAll('.section-title').forEach(t => {
-        t.querySelectorAll('.word-wrap').forEach(w => {
-            w.style.transform = 'translateY(100%)';
-            w.style.opacity = '0';
+        document.querySelectorAll('.section-title').forEach(t => {
+            t.querySelectorAll('.word-wrap').forEach(w => {
+                w.style.transform = 'translateY(100%)';
+                w.style.opacity = '0';
+            });
+            titleObs.observe(t);
         });
-        titleObs.observe(t);
-    });
+    }
 
 
     // =============================================
     // 3D TILT — Cards with data-tilt (Optimized)
     // =============================================
-    document.querySelectorAll('[data-tilt]').forEach(card => {
+    if (finePointer && !prefersReducedMotion) {
+        document.querySelectorAll('[data-tilt]').forEach(card => {
         let rect;
+        let tiltRaf = 0;
         card.addEventListener('mouseenter', () => {
             rect = card.getBoundingClientRect();
         });
@@ -173,18 +249,21 @@
             const x = (e.clientX - rect.left) / rect.width - 0.5;
             const y = (e.clientY - rect.top) / rect.height - 0.5;
             // Use requestAnimationFrame for smoother hardware-accelerated paint
-            requestAnimationFrame(() => {
+            cancelAnimationFrame(tiltRaf);
+            tiltRaf = requestAnimationFrame(() => {
                 card.style.transform = `perspective(600px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg) translateY(-6px) scale(1.02)`;
             });
         });
 
         card.addEventListener('mouseleave', () => {
             rect = null;
-            requestAnimationFrame(() => {
+            cancelAnimationFrame(tiltRaf);
+            tiltRaf = requestAnimationFrame(() => {
                 card.style.transform = '';
             });
         });
-    });
+        });
+    }
 
 
     // =============================================
@@ -192,12 +271,17 @@
     // =============================================
     const canvasContainer = document.getElementById('canvas-container');
     if (canvasContainer && window.THREE) {
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        const renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: !isMobile,
+            powerPreference: 'high-performance'
+        });
         renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
         canvasContainer.appendChild(renderer.domElement);
 
         // Scale up camera slightly to fit the bigger elements without cutting the ring off the viewport
@@ -214,7 +298,7 @@
             { color: new THREE.Color(0xfdcb6e), center: new THREE.Vector3(-2, -2, 2) } // Electric Yellow
         ];
 
-        const numParticles = 600;
+        const numParticles = window.innerWidth < 768 ? 180 : 380;
         const positions = new Float32Array(numParticles * 3);
         const colors = new Float32Array(numParticles * 3);
         const particleData = [];
@@ -310,45 +394,81 @@
             renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
         });
 
+        let heroInView = true;
+        const heroHost = document.getElementById('hero');
+
         const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const t = clock.getElapsedTime();
-            
-            if (!document.hidden) {
-                // Chart gently revolves
-                chartGroup.rotation.y = t * 0.05;
-                chartGroup.rotation.x = Math.sin(t * 0.1) * 0.1;
+        let lastRenderTime = 0;
+        let threeRaf = 0;
 
-                // Animate particles organically orbiting inside their data clusters
-                const pos = scatterGeo.attributes.position.array;
-                
-                for (let i = 0; i < numParticles; i++) {
-                    const pData = particleData[i];
-                    pData.angle += pData.speed * 0.02;
-
-                    const clusterCenter = clusters[pData.clusterIndex].center;
-
-                    // Wobble the offset to make the cluster cloud look alive and fluid
-                    const currentOffsetX = pData.offsetX * Math.cos(pData.angle) + pData.offsetZ * Math.sin(pData.angle);
-                    const currentOffsetZ = pData.offsetZ * Math.cos(pData.angle) - pData.offsetX * Math.sin(pData.angle);
-                    const currentOffsetY = pData.offsetY + Math.sin(pData.angle * 2) * 0.2;
-
-                    pos[i * 3] = clusterCenter.x + currentOffsetX;
-                    pos[i * 3 + 1] = clusterCenter.y + currentOffsetY;
-                    pos[i * 3 + 2] = clusterCenter.z + currentOffsetZ;
-                }
-                
-                // Subtle pulse on the grid surface
-                gridHelper.material.opacity = 0.05 + Math.sin(t * 0.5) * 0.02;
-
-                // Finalize geometry updates
-                scatterGeo.attributes.position.needsUpdate = true;
-
-                renderer.render(scene, camera);
-            }
+        function stopThreeLoop() {
+            if (!threeRaf) return;
+            cancelAnimationFrame(threeRaf);
+            threeRaf = 0;
         }
-        animate();
+
+        function runThreeLoop() {
+            if (threeRaf || !heroInView || document.hidden) return;
+            clock.getDelta(); // Reset long idle delta before resuming.
+            threeRaf = requestAnimationFrame(animate);
+        }
+
+        function animate() {
+            if (!heroInView || document.hidden) {
+                threeRaf = 0;
+                return;
+            }
+            threeRaf = requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+            if (t - lastRenderTime < (1 / 45)) return;
+            lastRenderTime = t;
+
+            // Chart gently revolves
+            chartGroup.rotation.y = t * 0.05;
+            chartGroup.rotation.x = Math.sin(t * 0.1) * 0.1;
+
+            // Animate particles organically orbiting inside their data clusters
+            const pos = scatterGeo.attributes.position.array;
+            
+            for (let i = 0; i < numParticles; i++) {
+                const pData = particleData[i];
+                pData.angle += pData.speed * 0.02;
+
+                const clusterCenter = clusters[pData.clusterIndex].center;
+
+                // Wobble the offset to make the cluster cloud look alive and fluid
+                const currentOffsetX = pData.offsetX * Math.cos(pData.angle) + pData.offsetZ * Math.sin(pData.angle);
+                const currentOffsetZ = pData.offsetZ * Math.cos(pData.angle) - pData.offsetX * Math.sin(pData.angle);
+                const currentOffsetY = pData.offsetY + Math.sin(pData.angle * 2) * 0.2;
+
+                pos[i * 3] = clusterCenter.x + currentOffsetX;
+                pos[i * 3 + 1] = clusterCenter.y + currentOffsetY;
+                pos[i * 3 + 2] = clusterCenter.z + currentOffsetZ;
+            }
+            
+            // Subtle pulse on the grid surface
+            gridHelper.material.opacity = 0.05 + Math.sin(t * 0.5) * 0.02;
+
+            // Finalize geometry updates
+            scatterGeo.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        if (heroHost) {
+            const heroObs = new IntersectionObserver((entries) => {
+                heroInView = entries.some(entry => entry.isIntersecting);
+                if (heroInView) runThreeLoop();
+                else stopThreeLoop();
+            }, { threshold: 0.02 });
+            heroObs.observe(heroHost);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stopThreeLoop();
+            else runThreeLoop();
+        }, { passive: true });
+
+        runThreeLoop();
         
         // Add fade up entrance CSS trigger
         setTimeout(() => canvasContainer.style.opacity = 1, 400);
@@ -368,41 +488,6 @@
         skillObs.observe(bar);
     });
 
-
-    // =============================================
-    // STAT COUNTER — Bouncy (hero)
-    // =============================================
-    let statsAnimated = false;
-    const statCounters = document.querySelectorAll('.stat-number');
-
-    function animateStats() {
-        if (statsAnimated) return;
-        statsAnimated = true;
-        statCounters.forEach(counter => {
-            const target = parseInt(counter.dataset.count);
-            const duration = 1200;
-            const start = performance.now();
-
-            function easeOutBack(t) {
-                const c1 = 1.70158, c3 = c1 + 1;
-                return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-            }
-
-            function tick(now) {
-                const p = Math.min((now - start) / duration, 1);
-                counter.textContent = Math.round(target * easeOutBack(p));
-                if (p < 1) requestAnimationFrame(tick);
-                else counter.textContent = target;
-            }
-            requestAnimationFrame(tick);
-        });
-    }
-
-    const heroObs = new IntersectionObserver(([e]) => {
-        if (e.isIntersecting) animateStats();
-    }, { threshold: 0.3 });
-    heroObs.observe(document.getElementById('hero'));
-
     // =============================================
     // LIVE METRIC TICKER (Featured Card Hover)
     // =============================================
@@ -411,6 +496,8 @@
         if (!metricEl) return;
         
         let hasTicked = false;
+        let metricRaf = 0;
+        let resetTimer = 0;
         card.addEventListener('mouseenter', () => {
             if (hasTicked) return;
             hasTicked = true;
@@ -426,12 +513,17 @@
             function tick(now) {
                 const p = Math.min((now - start) / duration, 1);
                 metricEl.textContent = (target * easeOutQuart(p)).toFixed(1);
-                if (p < 1) requestAnimationFrame(tick);
-                else metricEl.textContent = target;
+                if (p < 1) {
+                    metricRaf = requestAnimationFrame(tick);
+                    return;
+                }
+                metricEl.textContent = target;
+                metricRaf = 0;
             }
-            requestAnimationFrame(tick);
+            metricRaf = requestAnimationFrame(tick);
             
-            setTimeout(() => hasTicked = false, 5000); 
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => { hasTicked = false; }, 5000); 
         });
     });
 
@@ -444,46 +536,61 @@
     // =============================================
     // MAGNETIC — Contact card icons
     // =============================================
-    document.querySelectorAll('.contact-card').forEach(card => {
-        let rect;
-        card.addEventListener('mouseenter', () => { rect = card.getBoundingClientRect(); });
-        
-        card.addEventListener('mousemove', (e) => {
-            if (!rect) return;
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
+    if (finePointer && !prefersReducedMotion) {
+        document.querySelectorAll('.contact-card').forEach(card => {
+            let rect;
+            let iconRaf = 0;
             const svg = card.querySelector('svg');
-            if (svg) {
-                requestAnimationFrame(() => {
+            if (!svg) return;
+            card.addEventListener('mouseenter', () => { rect = card.getBoundingClientRect(); });
+            
+            card.addEventListener('mousemove', (e) => {
+                if (!rect) return;
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                cancelAnimationFrame(iconRaf);
+                iconRaf = requestAnimationFrame(() => {
                     svg.style.transform = `translate(${x * 0.12}px, ${y * 0.12}px) scale(1.12)`;
                 });
-            }
+            });
+
+            card.addEventListener('mouseleave', () => {
+                rect = null;
+                cancelAnimationFrame(iconRaf);
+                iconRaf = requestAnimationFrame(() => { svg.style.transform = ''; });
+            });
         });
-
-        card.addEventListener('mouseleave', () => {
-            rect = null;
-            const svg = card.querySelector('svg');
-            if (svg) requestAnimationFrame(() => svg.style.transform = '');
-        });
-    });
-
-
-    // =============================================
-    // ICON FLOAT — About cards
-    // =============================================
-    document.querySelectorAll('.about-card-icon').forEach((icon, i) => {
-        icon.style.animation = `iconFloat 3.5s ease-in-out ${i * 0.4}s infinite`;
-    });
-
-    const floatStyle = document.createElement('style');
-    floatStyle.textContent = `@keyframes iconFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }`;
-    document.head.appendChild(floatStyle);
-
-
+    }
     // =============================================
     // ACTIVE NAV HIGHLIGHT
     // =============================================
     const sections = document.querySelectorAll('section[id]');
+    let activeSectionId = '';
+    const heroSection = document.getElementById('hero');
+    const heroInner = document.querySelector('.hero-inner');
+    let heroHeightCached = 1;
+    let timelineTop = 0;
+    let timelineHeight = 1;
+    let totalScrollableHeight = 1;
+    let sectionRanges = [];
+
+    const refreshLayoutMetrics = () => {
+        sectionRanges = Array.from(sections).map(section => ({
+            id: section.getAttribute('id'),
+            top: section.offsetTop,
+            bottom: section.offsetTop + section.offsetHeight
+        })).filter(section => section.id);
+
+        heroHeightCached = heroSection ? Math.max(heroSection.offsetHeight, 1) : 1;
+        if (timeline) {
+            timelineTop = timeline.offsetTop;
+            timelineHeight = Math.max(timeline.offsetHeight, 1);
+        }
+        totalScrollableHeight = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    };
+    refreshLayoutMetrics();
+    window.addEventListener('resize', refreshLayoutMetrics, { passive: true });
+    window.addEventListener('load', refreshLayoutMetrics, { passive: true });
 
     // Note: Scroll listener for active link moved to single handler
 
@@ -497,16 +604,161 @@
     }
 
     // =============================================
+    // CONTACT FORM (FORMSPREE)
+    // =============================================
+    const contactForm = document.getElementById('contactForm');
+    const contactSubmit = document.getElementById('contactSubmit');
+    const contactFormStatus = document.getElementById('contactFormStatus');
+
+    if (contactForm && contactSubmit && contactFormStatus) {
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const actionUrl = contactForm.getAttribute('action') || '';
+
+            if (!actionUrl || !actionUrl.startsWith('https://formspree.io/f/')) {
+                contactFormStatus.textContent = 'Contact form endpoint is not configured correctly.';
+                contactFormStatus.className = 'contact-form-status error';
+                return;
+            }
+
+            contactSubmit.disabled = true;
+            contactSubmit.querySelector('span').textContent = 'Sending...';
+            contactFormStatus.textContent = '';
+            contactFormStatus.className = 'contact-form-status';
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: new FormData(contactForm)
+                });
+
+                if (!response.ok) throw new Error('Form submission failed');
+
+                contactForm.reset();
+                contactFormStatus.textContent = 'Thanks, your message was sent successfully.';
+                contactFormStatus.className = 'contact-form-status success';
+            } catch (err) {
+                contactFormStatus.textContent = 'Unable to send right now. Please try again or email me directly.';
+                contactFormStatus.className = 'contact-form-status error';
+            } finally {
+                contactSubmit.disabled = false;
+                contactSubmit.querySelector('span').textContent = 'Send Message';
+            }
+        });
+    }
+
+    // =============================================
+    // DASHBOARD EMBED SWITCHER
+    // =============================================
+    const dashboardEmbed = document.getElementById('dashboardEmbed');
+    const dashboardSwitchButtons = document.querySelectorAll('.dashboard-switch-btn');
+    const dashboardActionButtons = document.querySelectorAll('.bento-action-button[data-dashboard-switch]');
+    const dashboardSection = document.getElementById('live-dashboard');
+
+    const setActiveDashboard = (dashboardId) => {
+        if (!dashboardEmbed || !dashboardSwitchButtons.length) return;
+
+        const activeButton = Array.from(dashboardSwitchButtons).find(
+            btn => btn.dataset.dashboard === dashboardId
+        ) || dashboardSwitchButtons[0];
+
+        if (!activeButton) return;
+
+        dashboardSwitchButtons.forEach(btn => {
+            const isActive = btn === activeButton;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', String(isActive));
+        });
+
+        const nextSrc = activeButton.dataset.src;
+        const nextTitle = activeButton.dataset.title || 'Live Dashboard';
+        if (nextSrc && dashboardEmbed.src !== nextSrc) {
+            dashboardEmbed.src = nextSrc;
+        }
+        dashboardEmbed.title = nextTitle;
+    };
+
+    if (dashboardSwitchButtons.length) {
+        dashboardSwitchButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setActiveDashboard(btn.dataset.dashboard);
+            });
+        });
+    }
+
+    if (dashboardActionButtons.length) {
+        dashboardActionButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveDashboard(btn.dataset.dashboardSwitch);
+                dashboardSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    }
+
+    // =============================================
     // PROJECT MODALS
     // =============================================
     const modal = document.getElementById('projectModal');
     const modalBody = document.getElementById('modalBody');
     const modalClose = document.getElementById('modalClose');
+    const projectCaseStudies = {
+        'Fraud Detection System': {
+            problem: 'Manual fraud reviews were slow and generated too many false positives on highly imbalanced transaction data.',
+            approach: 'Built a classification pipeline with feature engineering, SMOTE balancing, and XGBoost tuning to prioritize high-risk events.',
+            result: 'Reached 94% recall and reduced false positives by 12%, improving analyst review efficiency and decision confidence.',
+            tools: 'Python, XGBoost, SMOTE, Pandas, SQL',
+            liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no',
+            codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
+            proofs: ['94% Recall', '-12% False Positives', '284K Transactions']
+        },
+        'CHD Risk Dashboard': {
+            problem: 'Stakeholders lacked a clear view of how CHD risk varied across demographic and clinical factors.',
+            approach: 'Modeled risk cohorts and built an interactive Power BI dashboard with drill-down filters and KPI summaries.',
+            result: 'Surfaced a 15% risk variance across age buckets and improved speed of risk insight reviews.',
+            tools: 'Power BI, DAX, Power Query, Excel',
+            liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/Stocks?showVizHome=no',
+            codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
+            proofs: ['15% Risk Variance', 'Drill-Down Filters', 'KPI Summary View']
+        },
+        'Fintech Payments': {
+            problem: 'Payment trend analysis queries were too slow for timely reporting and anomaly checks.',
+            approach: 'Refactored SQL with CTE optimization, indexing strategy, and cleaner aggregation patterns for faster analysis.',
+            result: 'Improved query performance by 30% and enabled faster threshold analysis for operations teams.',
+            tools: 'SQL, Python, BigQuery, Excel',
+            liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no',
+            codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
+            proofs: ['30% Faster Queries', 'CTE Refactor', 'Threshold Monitoring']
+        },
+        'HR Analytics Dashboard': {
+            problem: 'HR reporting required manual consolidation, making attrition and workforce insights hard to access.',
+            approach: 'Built a Tableau dashboard with role-based filters, attrition views, and reusable metric calculations.',
+            result: 'Reduced reporting turnaround from hours to minutes and improved visibility into workforce trends.',
+            tools: 'Tableau, Excel, SQL',
+            liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no',
+            codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
+            proofs: ['Hours to Minutes', 'Role-Based Filters', 'Attrition Insights']
+        }
+    };
+
+    const openModal = () => {
+        const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth, 0);
+        document.body.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
+        document.body.classList.add('modal-open');
+        modal.classList.add('active');
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('--scrollbar-width');
+    };
 
     if (modal && modalBody && modalClose) {
         document.querySelectorAll('.bento-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                if (e.target.closest('.bento-link')) return;
+                if (e.target.closest('.bento-link') || e.target.closest('.bento-action-button')) return;
 
                 const titleElem = card.querySelector('h3');
                 const pElem = card.querySelector('p');
@@ -519,6 +771,19 @@
                 const text = pElem ? pElem.textContent : '';
                 const tags = tagsElem ? tagsElem.innerHTML : '';
                 const icon = visElem ? visElem.innerHTML : '';
+                const caseStudy = projectCaseStudies[title] || {
+                    problem: text || 'Business context and challenge details can be added for this project.',
+                    approach: 'Summarize how you designed the solution and key technical choices.',
+                    result: 'Quantify impact with one to two metrics or measurable outcomes.',
+                    tools: tagsElem ? Array.from(tagsElem.querySelectorAll('.tag')).map(tag => tag.textContent).join(', ') : 'Python, SQL, BI',
+                    liveUrl: '#live-dashboard',
+                    codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
+                    proofs: ['Key Metric', 'Validated Outcome', 'Production-Ready']
+                };
+
+                const proofChips = (caseStudy.proofs || [])
+                    .map(proof => `<span class="proof-chip">${proof}</span>`)
+                    .join('');
 
                 modalBody.innerHTML = `
                     <div class="modal-visual">${icon}</div>
@@ -526,16 +791,33 @@
                         <div class="bento-tags" style="margin-bottom:12px;">${tags}</div>
                         <h2>${title}</h2>
                         <p class="modal-desc">${text}</p>
-                        <p class="modal-details">This project focused on establishing rigorous data pipelines, deploying advanced predictive models, and creating highly intuitive dashboards for stakeholders. By combining <strong>${title}</strong> techniques, we achieved significant improvements in processing time and reporting accuracy.</p>
+                        <div class="case-proof-chips">${proofChips}</div>
+                        <div class="case-study-grid">
+                            <div class="case-study-item">
+                                <span class="case-label">Problem</span>
+                                <p class="modal-details">${caseStudy.problem}</p>
+                            </div>
+                            <div class="case-study-item">
+                                <span class="case-label">Approach</span>
+                                <p class="modal-details">${caseStudy.approach}</p>
+                            </div>
+                            <div class="case-study-item">
+                                <span class="case-label">Result</span>
+                                <p class="modal-details">${caseStudy.result}</p>
+                            </div>
+                            <div class="case-study-item">
+                                <span class="case-label">Tools</span>
+                                <p class="modal-details">${caseStudy.tools}</p>
+                            </div>
+                        </div>
                         <div class="modal-actions">
-                            <a href="#" class="btn btn-primary" target="_blank" rel="noopener noreferrer"><span>Live Dashboard</span></a>
-                            <a href="#" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Source Code</a>
+                            <a href="${caseStudy.liveUrl}" class="btn btn-primary" target="_blank" rel="noopener noreferrer"><span>Live Dashboard</span></a>
+                            <a href="${caseStudy.codeUrl}" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Source Code</a>
                         </div>
                     </div>
                 `;
 
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
+                openModal();
             });
             
             // Keyboard accessibility for bento cards
@@ -547,23 +829,18 @@
             });
         });
 
-        modalClose.addEventListener('click', () => {
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
-        });
+        modalClose.addEventListener('click', closeModal);
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
+                closeModal();
             }
         });
         
         // Escape key to close modal
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && modal.classList.contains('active')) {
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
+                closeModal();
             }
         });
     }
@@ -582,28 +859,6 @@
     }
 
     // =============================================
-    // FAST TYPEWRITER EFFECT
-    // =============================================
-    const twElements = document.querySelectorAll('.typewriter-fx');
-    twElements.forEach(el => {
-        const text = el.getAttribute('data-text');
-        if (!text) return;
-        el.innerHTML = '';
-        
-        setTimeout(() => {
-            let i = 0;
-            const typingInterval = setInterval(() => {
-                if (i < text.length) {
-                    el.innerHTML += text.charAt(i);
-                    i++;
-                } else {
-                    clearInterval(typingInterval);
-                }
-            }, 60);
-        }, 600); // Start typing shortly after fade-in
-    });
-
-    // =============================================
     // GLOBAL OPTIMIZED SCROLL HANDLER
     // =============================================
     let isScrolling = false;
@@ -613,30 +868,31 @@
                 const scrollY = window.scrollY;
                 
                 // 1. Nav shadow
-                nav.classList.toggle('scrolled', scrollY > 50);
+                if (nav) nav.classList.toggle('scrolled', scrollY > 50);
                 
                 // 2. Active Section Highlight
                 const pos = scrollY + 200;
-                sections.forEach(section => {
-                    const top = section.offsetTop;
-                    const h = section.offsetHeight;
-                    if (pos >= top && pos < top + h) {
-                        const id = section.getAttribute('id');
-                        document.querySelectorAll('.nav-link').forEach(link => {
-                            link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
-                        });
+                for (const section of sectionRanges) {
+                    if (pos >= section.top && pos < section.bottom) {
+                        const id = section.id;
+                        if (id && id !== activeSectionId) {
+                            navLinkByTarget.get(`#${activeSectionId}`)?.classList.remove('active');
+                            navLinkByTarget.get(`#${id}`)?.classList.add('active');
+                            activeSectionId = id;
+                        }
+                        break;
                     }
-                });
+                }
 
                 // 3. Scroll Progress Bar
-                const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
                 if (scrollProgress) {
-                    scrollProgress.style.width = (scrollY / totalHeight) * 100 + '%';
+                    const progress = (scrollY / totalScrollableHeight) * 100;
+                    scrollProgress.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
                 }
 
                 // 3.5 Hide Scroll Indicator at bottom
                 if (scrollIndicator) {
-                    if (scrollY > totalHeight - 150) {
+                    if (scrollY > totalScrollableHeight - 150) {
                         scrollIndicator.classList.add('hidden');
                     } else {
                         scrollIndicator.classList.remove('hidden');
@@ -645,16 +901,19 @@
 
                 // 4. Timeline Draw-On Progress
                 if (timeline && timelineFill) {
-                    const rect = timeline.getBoundingClientRect();
-                    const startDist = rect.top - (window.innerHeight * 0.5);
-                    const endDist = rect.height;
-                    
-                    if (startDist < 0) {
-                        let progress = Math.abs(startDist) / endDist;
-                        progress = Math.min(Math.max(progress, 0), 1);
-                        timelineFill.style.height = `${progress * 100}%`;
-                    } else {
-                        timelineFill.style.height = '0%';
+                    const viewportAnchor = scrollY + (window.innerHeight * 0.5);
+                    const rawProgress = (viewportAnchor - timelineTop) / timelineHeight;
+                    const progress = Math.min(Math.max(rawProgress, 0), 1);
+                    timelineFill.style.transform = `scaleY(${progress})`;
+                }
+
+                // 4.5 Hero scroll parallax
+                if (!prefersReducedMotion && heroSection && heroInner && canvasContainer) {
+                    if (scrollY <= heroHeightCached * 1.2) {
+                        const heroProgress = Math.min(Math.max(scrollY / (heroHeightCached * 0.9), 0), 1);
+                        heroInner.style.transform = `translateY(${heroProgress * 55}px)`;
+                        heroInner.style.opacity = `${1 - (heroProgress * 0.35)}`;
+                        canvasContainer.style.transform = `translateY(${heroProgress * 95}px) scale(${1 - (heroProgress * 0.06)})`;
                     }
                 }
 
