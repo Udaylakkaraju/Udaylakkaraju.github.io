@@ -288,45 +288,6 @@
     });
 
     // =============================================
-    // LIVE METRIC TICKER (Featured Card Hover)
-    // =============================================
-    document.querySelectorAll('.bento-card').forEach(card => {
-        const metricEl = card.querySelector('.metric-value');
-        if (!metricEl) return;
-        
-        let hasTicked = false;
-        let metricRaf = 0;
-        let resetTimer = 0;
-        card.addEventListener('mouseenter', () => {
-            if (hasTicked) return;
-            hasTicked = true;
-            
-            const target = 94.2; 
-            const duration = 1500;
-            const start = performance.now();
-            
-            function easeOutQuart(x) {
-                return 1 - Math.pow(1 - x, 4);
-            }
-            
-            function tick(now) {
-                const p = Math.min((now - start) / duration, 1);
-                metricEl.textContent = (target * easeOutQuart(p)).toFixed(1);
-                if (p < 1) {
-                    metricRaf = requestAnimationFrame(tick);
-                    return;
-                }
-                metricEl.textContent = target;
-                metricRaf = 0;
-            }
-            metricRaf = requestAnimationFrame(tick);
-            
-            clearTimeout(resetTimer);
-            resetTimer = setTimeout(() => { hasTicked = false; }, 5000); 
-        });
-    });
-
-    // =============================================
     // TIMELINE PROGRESS DRAW-ON SCROLL
     // =============================================
     const timeline = document.querySelector('.timeline');
@@ -527,14 +488,14 @@
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
             proofs: ['$2.77M At-Risk Profit', '40.67% Breach Concentration', '180K+ Orders']
         },
-        'Academic Risk Analytics': {
-            problem: 'Academic risk indicators were spread across siloed systems, delaying intervention for at-risk students.',
-            approach: 'Consolidated data into SQL and ran cohort analysis on CGPA, attendance, and backlog trends to prioritize advising actions.',
-            result: 'Enabled earlier risk detection on 1K+ students and supported reporting automation that saved 12-15 hours per month.',
-            tools: 'SQL, Python, Cohort Analysis, KPI Dashboards',
+        'Content Investment Analysis': {
+            problem: 'Content investment teams needed a portfolio-level view of audience value, downside risk, and franchise decay to improve allocation decisions.',
+            approach: 'Built a Python analytics workflow over 4,562 films (2000-2024) to evaluate audience value, capital efficiency, language-era shifts, and risk across low-budget, mid-budget, big-budget, and highest-budget tiers.',
+            result: 'Found that 70% of sequels underperformed prior installments, highest-budget films had the lowest loss rate (8.9%), and top-tier directors delivered 9.7x higher median audience value than low-tier peers.',
+            tools: 'Python, Pandas, Portfolio Analytics, Power BI (in progress)',
             liveUrl: '#live-dashboard',
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
-            proofs: ['75% Data Quality Gain', '12-15 Hours/Month Saved', '1K+ Student Risk Signals']
+            proofs: ['4,562 Films (2000-2024)', '70% Sequel Underperformance', '8.9% Loss Rate (Highest-budget)']
         }
     };
 
