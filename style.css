@@ -1638,8 +1638,8 @@ body.modal-open {
  .back-to-top {
      position: fixed;
      bottom: 30px;
-     left: 50%;
-     transform: translateX(-50%) translateY(20px);
+    right: 30px;
+    transform: translateY(20px);
      width: 48px;
      height: 48px;
      border-radius: 50%;
@@ -1660,17 +1660,17 @@ body.modal-open {
  .back-to-top.visible {
      opacity: 1;
      visibility: visible;
-     transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
  }
 
  .back-to-top:hover {
-     transform: translateX(-50%) translateY(-5px) scale(1.05);
+    transform: translateY(-5px) scale(1.05);
      box-shadow: var(--shadow-up-hover);
      background: var(--surface-hover);
  }
 
  .back-to-top:active {
-     transform: translateX(-50%) translateY(0) scale(0.95);
+    transform: translateY(0) scale(0.95);
  }
 
  /* ============================================

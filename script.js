@@ -500,41 +500,41 @@
     const modalBody = document.getElementById('modalBody');
     const modalClose = document.getElementById('modalClose');
     const projectCaseStudies = {
-        'Fraud Detection System': {
-            problem: 'Manual fraud reviews were slow and generated too many false positives on highly imbalanced transaction data.',
-            approach: 'Built a classification pipeline with feature engineering, SMOTE balancing, and XGBoost tuning to prioritize high-risk events.',
-            result: 'Reached 94% recall and reduced false positives by 12%, improving analyst review efficiency and decision confidence.',
-            tools: 'Python, XGBoost, SMOTE, Pandas, SQL',
+        'Payment Fraud Detection': {
+            problem: 'Payment authorization performance dropped sharply during specific windows, increasing failed transactions and fraud exposure.',
+            approach: 'Built SQL and Python analytics with fraud pattern detection and retry-window diagnostics, then presented findings in a Power BI decision dashboard.',
+            result: 'Recovered up to 15% failed transactions, detected 2.4K+ fraud events with AUC 0.96, and surfaced controls for rapid-repeat fraud patterns.',
+            tools: 'SQL, Python, Power BI, Predictive Modeling',
             liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no',
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
-            proofs: ['94% Recall', '-12% False Positives', '284K Transactions']
+            proofs: ['2.4K+ Fraud Events', 'AUC 0.96', '15% Recovery Potential']
         },
-        'CHD Risk Dashboard': {
-            problem: 'Stakeholders lacked a clear view of how CHD risk varied across demographic and clinical factors.',
-            approach: 'Modeled risk cohorts and built an interactive Power BI dashboard with drill-down filters and KPI summaries.',
-            result: 'Surfaced a 15% risk variance across age buckets and improved speed of risk insight reviews.',
-            tools: 'Power BI, DAX, Power Query, Excel',
+        'Clinical Workflow Analytics': {
+            problem: 'Clinical teams lacked visibility into where patients were dropping off in the diagnosis pathway.',
+            approach: 'Modeled the journey across 4,969 records and built an end-to-end SQL/Python analytics workflow with stage-level bottleneck analysis.',
+            result: 'Identified two 44% drop-off stages and projected a 19% diagnosis-rate improvement through targeted intervention design.',
+            tools: 'SQL, Python, Workflow Analytics',
             liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/Stocks?showVizHome=no',
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
-            proofs: ['15% Risk Variance', 'Drill-Down Filters', 'KPI Summary View']
+            proofs: ['4,969 Patient Records', '19% Projected Lift', '3x Faster Delay Trend']
         },
-        'Fintech Payments': {
-            problem: 'Payment trend analysis queries were too slow for timely reporting and anomaly checks.',
-            approach: 'Refactored SQL with CTE optimization, indexing strategy, and cleaner aggregation patterns for faster analysis.',
-            result: 'Improved query performance by 30% and enabled faster threshold analysis for operations teams.',
-            tools: 'SQL, Python, BigQuery, Excel',
+        'Supply Chain SLA Analytics': {
+            problem: 'SLA breach handling treated all delayed orders equally, exposing high-margin orders to preventable risk.',
+            approach: 'Built a value-aware supply chain pipeline across GCP, dbt, SQL, and Python to prioritize fulfillment decisions by margin and reliability impact.',
+            result: 'Flagged $2.77M in high-profit orders at SLA risk and isolated the top 5 lanes causing 40.67% of breaches for targeted controls.',
+            tools: 'GCP BigQuery, dbt, SQL, Python',
             liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no',
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
-            proofs: ['30% Faster Queries', 'CTE Refactor', 'Threshold Monitoring']
+            proofs: ['$2.77M At-Risk Profit', '40.67% Breach Concentration', '180K+ Orders']
         },
-        'HR Analytics Dashboard': {
-            problem: 'HR reporting required manual consolidation, making attrition and workforce insights hard to access.',
-            approach: 'Built a Tableau dashboard with role-based filters, attrition views, and reusable metric calculations.',
-            result: 'Reduced reporting turnaround from hours to minutes and improved visibility into workforce trends.',
-            tools: 'Tableau, Excel, SQL',
-            liveUrl: 'https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no',
+        'Academic Risk Analytics': {
+            problem: 'Academic risk indicators were spread across siloed systems, delaying intervention for at-risk students.',
+            approach: 'Consolidated data into SQL and ran cohort analysis on CGPA, attendance, and backlog trends to prioritize advising actions.',
+            result: 'Enabled earlier risk detection on 1K+ students and supported reporting automation that saved 12-15 hours per month.',
+            tools: 'SQL, Python, Cohort Analysis, KPI Dashboards',
+            liveUrl: '#live-dashboard',
             codeUrl: 'https://github.com/Udaylakkaraju?tab=repositories',
-            proofs: ['Hours to Minutes', 'Role-Based Filters', 'Attrition Insights']
+            proofs: ['75% Data Quality Gain', '12-15 Hours/Month Saved', '1K+ Student Risk Signals']
         }
     };
 
