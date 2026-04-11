@@ -527,7 +527,10 @@
                 const title = titleElem.textContent;
                 const text = pElem ? pElem.textContent : '';
                 const tags = tagsElem ? tagsElem.innerHTML : '';
-                const icon = visElem ? visElem.innerHTML : '';
+                const imgEl = visElem?.querySelector('.bento-visual-media');
+                const svgEl = visElem?.querySelector('svg');
+                const imgSrc = imgEl ? imgEl.getAttribute('src') : '';
+                const svgHtml = svgEl ? svgEl.outerHTML : '';
                 const caseStudy = projectCaseStudies[title] || {
                     problem: text || 'Business context and challenge details can be added for this project.',
                     approach: 'Summarize how you designed the solution and key technical choices.',
@@ -543,9 +546,13 @@
                     .join('');
 
                 modalBody.innerHTML = `
-                    <div class="modal-visual">${icon}</div>
+                    <div class="modal-hero">
+                        ${imgSrc ? `<img class="modal-hero-img" src="${imgSrc}" alt="" loading="lazy" decoding="async">` : ''}
+                        <div class="modal-hero-fade" aria-hidden="true"></div>
+                        <div class="modal-hero-icon">${svgHtml}</div>
+                    </div>
                     <div class="modal-info">
-                        <div class="bento-tags" style="margin-bottom:12px;">${tags}</div>
+                        <div class="bento-tags modal-tags">${tags}</div>
                         <h2>${title}</h2>
                         <p class="modal-desc">${text}</p>
                         <div class="case-proof-chips">${proofChips}</div>

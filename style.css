@@ -1010,13 +1010,25 @@ body.modal-open {
  }
 
   .bento-visual {
-      flex: 1.2; /* Take slightly more space than info */
+      flex: 1 1 auto;
+      min-height: 120px;
+      max-height: min(42vh, 220px);
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
       overflow: hidden;
-     isolation: isolate;
+      isolation: isolate;
+ }
+
+ .bento-card--lg .bento-visual {
+     min-height: 200px;
+     max-height: none;
+ }
+
+ .bento-card--wide .bento-visual {
+     min-height: 132px;
+     max-height: min(36vh, 220px);
  }
 
 .bento-visual-media {
@@ -1060,14 +1072,18 @@ body.modal-open {
  }
 
  .bento-info {
-     flex: 1; /* Ensure info section gets its share of height */
-      padding: 18px 22px 22px 22px;
-      background: linear-gradient(to top, var(--surface), var(--glass));
-      backdrop-filter: blur(8px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-  }
+     flex: 1 1 55%;
+     min-height: 0;
+     padding: 16px 20px 20px;
+     background: linear-gradient(to bottom, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--glass)) 100%);
+     backdrop-filter: blur(12px);
+     border-top: 1px solid var(--glass-border);
+     display: flex;
+     flex-direction: column;
+     justify-content: flex-start;
+     position: relative;
+     z-index: 2;
+ }
 
  .bento-tags {
      display: flex;
@@ -1149,6 +1165,7 @@ body.modal-open {
      position: absolute;
      top: 14px;
      right: 14px;
+     z-index: 5;
      width: 32px;
      height: 32px;
      border-radius: 50%;
@@ -1936,28 +1953,73 @@ body.modal-open {
  }
 
  .project-modal-body {
-     display: grid;
-     grid-template-columns: 1fr 1.2fr;
+     display: flex;
+     flex-direction: column;
      gap: 0;
  }
 
- .modal-visual {
-     background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), rgba(0, 206, 201, 0.05));
+ .modal-hero {
+     position: relative;
+     flex: none;
+     width: 100%;
+     min-height: 140px;
+     max-height: 200px;
+     overflow: hidden;
+     background: linear-gradient(135deg, rgba(108, 92, 231, 0.2), rgba(0, 206, 201, 0.12));
+     isolation: isolate;
+ }
+
+ .modal-hero-img {
+     position: absolute;
+     inset: 0;
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     opacity: 0.35;
+     z-index: 0;
+ }
+
+ .modal-hero-fade {
+     position: absolute;
+     inset: 0;
+     z-index: 1;
+     background: linear-gradient(
+         180deg,
+         rgba(16, 15, 36, 0.55) 0%,
+         rgba(16, 15, 36, 0.75) 45%,
+         rgba(16, 15, 36, 0.92) 100%
+     );
+     pointer-events: none;
+ }
+
+ .modal-hero-icon {
+     position: relative;
+     z-index: 2;
      display: flex;
      align-items: center;
      justify-content: center;
-     padding: 60px;
+     min-height: 140px;
+     padding: 28px 24px;
      color: var(--accent);
  }
 
- .modal-visual svg {
-     width: 120px;
-     height: 120px;
-     opacity: 0.8;
+ .modal-hero-icon svg {
+     width: clamp(72px, 14vw, 112px);
+     height: clamp(72px, 14vw, 112px);
+     opacity: 0.85;
+     filter: drop-shadow(0 4px 24px rgba(0, 0, 0, 0.35));
  }
 
  .modal-info {
-     padding: 50px 40px;
+     padding: 28px 32px 36px;
+     background: var(--surface);
+     border-top: 1px solid var(--glass-border);
+     position: relative;
+     z-index: 3;
+ }
+
+ .modal-tags {
+     margin-bottom: 10px;
  }
 
  .modal-info h2 {
@@ -1994,6 +2056,7 @@ body.modal-open {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     padding: 12px 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .case-label {
@@ -2038,21 +2101,18 @@ body.modal-open {
  }
 
 @media (max-width: 768px) {
-     .project-modal-body {
-         grid-template-columns: 1fr;
-     }
+    .modal-hero {
+        min-height: 120px;
+        max-height: 160px;
+    }
 
-     .modal-visual {
-         padding: 40px;
-     }
-
-     .modal-visual svg {
-         width: 80px;
-         height: 80px;
-     }
+    .modal-hero-icon {
+        min-height: 120px;
+        padding: 20px 16px;
+    }
 
     .modal-info {
-        padding: 30px 24px;
+        padding: 22px 20px 28px;
     }
 
     .case-study-grid {
