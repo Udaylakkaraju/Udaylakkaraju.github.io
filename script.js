@@ -6,9 +6,11 @@
 (function () {
     'use strict';
 
-    // Keep motion behavior enabled consistently across sessions.
-    const prefersReducedMotion = false;
-    const finePointer = window.matchMedia('(pointer:fine)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const finePointer = window.matchMedia('(pointer: fine)').matches;
+    const canHover = window.matchMedia('(hover: hover)').matches;
+    /* Touch / no-hover: don’t remove .revealed off-screen — bidirectional reveal causes flicker while scrolling */
+    const scrollRevealExit = !prefersReducedMotion && canHover;
 
     // =============================================
     // DARK MODE TOGGLE
@@ -193,8 +195,7 @@
                         }, 1100);
                         revealTimers.set(el, timerId);
                     }
-                } else {
-                    // Reset visibility state so animation can replay on re-entry.
+                } else if (scrollRevealExit) {
                     el.classList.remove('revealed', 'reveal-pop');
                 }
             });
@@ -225,7 +226,7 @@
                 const wraps = entry.target.querySelectorAll('.word-wrap');
                 if (entry.isIntersecting) {
                     wraps.forEach(w => { w.style.transform = 'translateY(0)'; w.style.opacity = '1'; });
-                } else {
+                } else if (scrollRevealExit) {
                     wraps.forEach(w => { w.style.transform = 'translateY(100%)'; w.style.opacity = '0'; });
                 }
             });
@@ -279,7 +280,11 @@
     // =============================================
     const skillObs = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            entry.target.classList.toggle('animated', entry.isIntersecting);
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animated');
+            } else if (scrollRevealExit) {
+                entry.target.classList.remove('animated');
+            }
         });
     }, { threshold: 0.3 });
     
@@ -633,7 +638,7 @@
     let lastTimelineProgress = -1;
     let lastHeroTransform = '';
     let lastHeroOpacity = '';
-    const heroParallaxEnabled = !prefersReducedMotion && heroSection && heroInner;
+    const heroParallaxEnabled = !prefersReducedMotion && finePointer && heroSection && heroInner;
     window.addEventListener('scroll', () => {
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
