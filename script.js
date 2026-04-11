@@ -8,9 +8,15 @@
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const finePointer = window.matchMedia('(pointer: fine)').matches;
-    const canHover = window.matchMedia('(hover: hover)').matches;
-    /* Touch / no-hover: don’t remove .revealed off-screen — bidirectional reveal causes flicker while scrolling */
-    const scrollRevealExit = !prefersReducedMotion && canHover;
+    /* Only reset off-screen on “desktop mouse” setups — avoids touch scroll flicker */
+    const scrollRevealExit = !prefersReducedMotion
+        && window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+
+    const revealIoOpts = {
+        /* Any overlap counts — strict threshold/margin combos were skipping elements */
+        threshold: 0,
+        rootMargin: '0px 0px 0px 0px'
+    };
 
     // =============================================
     // DARK MODE TOGGLE
@@ -186,20 +192,23 @@
                 if (entry.isIntersecting) {
                     el.classList.add('revealed');
                     if (!el.classList.contains('reveal-pop')) {
-                        el.classList.add('reveal-pop');
-                        const activeTimer = revealTimers.get(el);
-                        if (activeTimer) clearTimeout(activeTimer);
-                        const timerId = setTimeout(() => {
-                            el.classList.remove('reveal-pop');
-                            revealTimers.delete(el);
-                        }, 1100);
-                        revealTimers.set(el, timerId);
+                        /* Let .revealed apply first so transition + bounce animation don’t fight */
+                        requestAnimationFrame(() => {
+                            el.classList.add('reveal-pop');
+                            const activeTimer = revealTimers.get(el);
+                            if (activeTimer) clearTimeout(activeTimer);
+                            const timerId = setTimeout(() => {
+                                el.classList.remove('reveal-pop');
+                                revealTimers.delete(el);
+                            }, 1100);
+                            revealTimers.set(el, timerId);
+                        });
                     }
                 } else if (scrollRevealExit) {
                     el.classList.remove('revealed', 'reveal-pop');
                 }
             });
-        }, { threshold: 0.06, rootMargin: '0px 0px -20px 0px' });
+        }, revealIoOpts);
 
         revealEls.forEach(el => revealObs.observe(el));
     }
@@ -230,7 +239,7 @@
                     wraps.forEach(w => { w.style.transform = 'translateY(100%)'; w.style.opacity = '0'; });
                 }
             });
-        }, { threshold: 0.3 });
+        }, { threshold: 0, rootMargin: '0px 0px 0px 0px' });
 
         document.querySelectorAll('.section-title').forEach(t => {
             t.querySelectorAll('.word-wrap').forEach(w => {
@@ -286,7 +295,7 @@
                 entry.target.classList.remove('animated');
             }
         });
-    }, { threshold: 0.3 });
+    }, { threshold: 0, rootMargin: '0px' });
     
     document.querySelectorAll('.skill-bar').forEach(bar => {
         skillObs.observe(bar);
