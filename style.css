@@ -996,14 +996,14 @@ body.modal-open {
      outline-offset: 4px;
  }
 
- /* Bento sizes */
+ /* Bento sizes — featured card is wide but one row tall; wide card is full-bleed below (no empty 2×2 block) */
  .bento-card--lg {
      grid-column: span 2;
-     grid-row: span 2;
+     grid-row: span 1;
  }
 
  .bento-card--wide {
-     grid-column: span 2;
+     grid-column: 1 / -1;
  }
 
  .bento-card--tall {
@@ -1023,8 +1023,12 @@ body.modal-open {
  }
 
  .bento-card--lg .bento-visual {
-     height: 200px;
-     min-height: 200px;
+     height: 148px;
+     min-height: 148px;
+ }
+
+ .bento-card--lg .bento-info {
+     padding: 14px 18px 18px;
  }
 
  .bento-card--wide .bento-visual {
@@ -1739,7 +1743,11 @@ body.modal-open {
 
      .bento-card--lg {
          grid-column: span 2;
-         grid-row: span 2;
+         grid-row: span 1;
+     }
+
+     .bento-card--wide {
+         grid-column: 1 / -1;
      }
  }
 
