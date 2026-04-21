@@ -13,9 +13,13 @@
     const scrollRevealExit = !prefersReducedMotion;
 
     const revealIoOpts = {
-        /* Any overlap counts — strict threshold/margin combos were skipping elements */
-        threshold: 0,
-        rootMargin: '0px 0px 0px 0px'
+        /*
+         * Hysteresis for stable mobile behavior:
+         * - enter threshold higher than exit threshold
+         * - prevents rapid in/out toggling (flicker) near viewport edges
+         */
+        threshold: [0, 0.08, 0.14],
+        rootMargin: '0px'
     };
 
     // =============================================
@@ -186,10 +190,17 @@
         });
     } else {
         const revealTimers = new WeakMap();
+        const revealState = new WeakMap();
         const revealObs = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const el = entry.target;
-                if (entry.isIntersecting) {
+                const ratio = entry.intersectionRatio || 0;
+                const isRevealed = revealState.get(el) === true;
+                const shouldReveal = entry.isIntersecting && ratio >= 0.12;
+                const shouldHide = !entry.isIntersecting || ratio <= 0.02;
+
+                if (shouldReveal && !isRevealed) {
+                    revealState.set(el, true);
                     el.classList.add('revealed');
                     if (!el.classList.contains('reveal-pop')) {
                         /* Let .revealed apply first so transition + bounce animation don’t fight */
@@ -204,7 +215,8 @@
                             revealTimers.set(el, timerId);
                         });
                     }
-                } else if (scrollRevealExit) {
+                } else if (scrollRevealExit && shouldHide && isRevealed) {
+                    revealState.set(el, false);
                     el.classList.remove('revealed', 'reveal-pop');
                 }
             });
@@ -230,16 +242,24 @@
             w.style.opacity = '1';
         });
     } else {
+        const titleState = new WeakMap();
         const titleObs = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const wraps = entry.target.querySelectorAll('.word-wrap');
-                if (entry.isIntersecting) {
+                const ratio = entry.intersectionRatio || 0;
+                const isVisible = titleState.get(entry.target) === true;
+                const shouldReveal = entry.isIntersecting && ratio >= 0.14;
+                const shouldHide = !entry.isIntersecting || ratio <= 0.03;
+
+                if (shouldReveal && !isVisible) {
+                    titleState.set(entry.target, true);
                     wraps.forEach(w => { w.style.transform = 'translateY(0)'; w.style.opacity = '1'; });
-                } else if (scrollRevealExit) {
+                } else if (scrollRevealExit && shouldHide && isVisible) {
+                    titleState.set(entry.target, false);
                     wraps.forEach(w => { w.style.transform = 'translateY(100%)'; w.style.opacity = '0'; });
                 }
             });
-        }, { threshold: 0, rootMargin: '0px 0px 0px 0px' });
+        }, { threshold: [0, 0.08, 0.16], rootMargin: '0px' });
 
         document.querySelectorAll('.section-title').forEach(t => {
             t.querySelectorAll('.word-wrap').forEach(w => {
@@ -287,15 +307,23 @@
     // =============================================
     // SKILL BARS — Animate on scroll (Optimized)
     // =============================================
+    const skillState = new WeakMap();
     const skillObs = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
+            const ratio = entry.intersectionRatio || 0;
+            const isVisible = skillState.get(entry.target) === true;
+            const shouldReveal = entry.isIntersecting && ratio >= 0.2;
+            const shouldHide = !entry.isIntersecting || ratio <= 0.05;
+
+            if (shouldReveal && !isVisible) {
+                skillState.set(entry.target, true);
                 entry.target.classList.add('animated');
-            } else if (scrollRevealExit) {
+            } else if (scrollRevealExit && shouldHide && isVisible) {
+                skillState.set(entry.target, false);
                 entry.target.classList.remove('animated');
             }
         });
-    }, { threshold: 0, rootMargin: '0px' });
+    }, { threshold: [0, 0.1, 0.25], rootMargin: '0px' });
     
     document.querySelectorAll('.skill-bar').forEach(bar => {
         skillObs.observe(bar);
