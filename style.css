@@ -4,7 +4,7 @@
    neumorphic shadows, morph gradient blobs
    ============================================ */
 :root {
-    --bg: #edeef3;
+    --bg: #e8e8f0;
     --bg-warm: #e8e6ef;
     --bg-dark: #1e1e2e;
     --bg-accent: #2a2845;
@@ -135,7 +135,7 @@ body.modal-open {
      position: absolute;
      border-radius: 50%;
      filter: blur(100px);
-     opacity: 0.4;
+    opacity: 0.55;
      will-change: transform;
  }
 
@@ -173,7 +173,7 @@ body.modal-open {
      top: 60%;
      right: 15%;
      animation: morphDrift4 28s ease-in-out infinite;
-     opacity: 0.25;
+    opacity: 0.4;
  }
 
  @keyframes morphDrift1 {
@@ -241,6 +241,24 @@ body.modal-open {
  }
 
  /* Background styling */
+
+/* Dot grid texture under noise layer */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(108, 92, 231, 0.18) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+[data-theme="dark"] body::before {
+    background-image: radial-gradient(circle, rgba(108, 92, 231, 0.12) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
 
  /* Subtle noise texture */
  body::after {
