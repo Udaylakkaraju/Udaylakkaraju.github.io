@@ -609,6 +609,7 @@
     const modal = document.getElementById('projectModal');
     const modalBody = document.getElementById('modalBody');
     const modalClose = document.getElementById('modalClose');
+    let remoteCaseStudies = {};
     const projectCaseStudies = {
         'Payment Fraud Detection': {
             problem: 'Payment authorization performance dropped sharply during specific windows, increasing failed transactions and fraud exposure.',
@@ -648,6 +649,20 @@
         }
     };
 
+    const loadRemoteCaseStudies = async () => {
+        try {
+            const response = await fetch('assets/data/project-case-studies.json', { cache: 'no-store' });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data && typeof data === 'object') {
+                remoteCaseStudies = data;
+            }
+        } catch (_) {
+            // Keep local defaults if remote data is unavailable.
+        }
+    };
+    loadRemoteCaseStudies();
+
     const openModal = () => {
         const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth, 0);
         document.body.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
@@ -680,7 +695,8 @@
                 const svgEl = visElem?.querySelector('svg');
                 const imgSrc = imgEl ? imgEl.getAttribute('src') : '';
                 const svgHtml = svgEl ? svgEl.outerHTML : '';
-                const caseStudy = projectCaseStudies[title] || {
+                const mergedCaseStudies = { ...projectCaseStudies, ...remoteCaseStudies };
+                const caseStudy = mergedCaseStudies[title] || {
                     problem: text || 'Business context and challenge details can be added for this project.',
                     approach: 'Summarize how you designed the solution and key technical choices.',
                     result: 'Quantify impact with one to two metrics or measurable outcomes.',

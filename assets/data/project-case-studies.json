@@ -1,0 +1,26 @@
+{
+  "Payment Fraud Detection": {
+    "problem": "Payment approvals showed concentrated failures by decline reason and hour, while fraud review needed better prioritization.",
+    "approach": "Combined SQL diagnostics and Python risk scoring with holdout evaluation, then packaged outputs for reporting and daily batch scoring.",
+    "result": "Analyzed 51,237 payments, quantified a 12.92% failure rate with $500,157.98 failed value opportunity, and observed 23.5% post-failure success within 24 hours.",
+    "tools": "SQL, Python, Power BI, Risk Scoring",
+    "liveUrl": "https://github.com/Udaylakkaraju/Payment-Fraud-Detection",
+    "codeUrl": "https://github.com/Udaylakkaraju/Payment-Fraud-Detection",
+    "proofs": [
+      "51,237 Payments Analyzed",
+      "23.5% Retry Opportunity",
+      "$500,157.98 Failed Value Pool"
+    ],
+    "metrics": {
+      "transactions_analyzed": 51237,
+      "failed_transactions": 6619,
+      "failed_transaction_rate_pct": 12.92,
+      "failed_value_pool_usd": 500157.98,
+      "retry_recovery_rate_pct": 23.5,
+      "holdout_recall_pct": 83.5,
+      "holdout_precision_pct": 100.0,
+      "holdout_false_positives": 0
+    },
+    "lastUpdated": "2026-04-21"
+  }
+}
