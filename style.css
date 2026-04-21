@@ -351,6 +351,7 @@ body.modal-open {
  }
 
  .theme-toggle {
+    margin-right: auto;
      background: none;
      border: none;
      color: var(--text-secondary);
@@ -1080,6 +1081,12 @@ body.modal-open {
     opacity: 0.84;
   }
 
+.bento-card:focus-visible .bento-visual-media,
+.bento-card:focus-within .bento-visual-media {
+    transform: scale(1.08);
+    opacity: 0.84;
+}
+
  .bento-visual svg {
      opacity: 0.4;
      transition: transform 0.5s var(--ease-spring), opacity 0.5s var(--ease-spring), box-shadow 0.5s var(--ease-spring), filter 0.5s var(--ease-spring), background 0.5s var(--ease-spring), color 0.5s var(--ease-spring);
@@ -1089,6 +1096,12 @@ body.modal-open {
      opacity: 0.7;
      transform: scale(1.1) rotate(-3deg);
  }
+
+.bento-card:focus-visible .bento-visual svg,
+.bento-card:focus-within .bento-visual svg {
+    opacity: 0.7;
+    transform: scale(1.08) rotate(-2deg);
+}
 
  .bento-info {
      flex: 1 1 auto;
@@ -1204,6 +1217,12 @@ body.modal-open {
      opacity: 1;
      transform: scale(1);
  }
+
+.bento-card:focus-visible .bento-link,
+.bento-card:focus-within .bento-link {
+    opacity: 1;
+    transform: scale(1);
+}
 
  /* ============================================
    TIMELINE

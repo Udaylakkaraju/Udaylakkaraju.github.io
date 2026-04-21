@@ -12,6 +12,8 @@
     /* Full-site bouncy replay: reset when elements leave viewport on all devices */
     const scrollRevealExit = !prefersReducedMotion;
 
+    const supportsIO = typeof window.IntersectionObserver === 'function';
+
     const revealIoOpts = {
         // Edge-safe observer config.
         threshold: 0,
@@ -179,7 +181,7 @@
     // Elements animate in AND out when entering/leaving
     // =============================================
     const revealEls = document.querySelectorAll('[data-reveal]');
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || !supportsIO) {
         revealEls.forEach(el => {
             el.classList.add('revealed');
             el.classList.remove('reveal-pop');
@@ -235,7 +237,7 @@
         ).join(' ');
     });
 
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || !supportsIO) {
         document.querySelectorAll('.section-title .word-wrap').forEach(w => {
             w.style.transform = 'translateY(0)';
             w.style.opacity = '1';
@@ -309,30 +311,35 @@
     // =============================================
     // SKILL BARS — Animate on scroll (Optimized)
     // =============================================
-    const skillState = new WeakMap();
-    const skillObs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            const isVisible = skillState.get(entry.target) === true;
-            const rect = entry.boundingClientRect;
-            const viewportH = window.innerHeight || document.documentElement.clientHeight;
-            const isFarAbove = rect.bottom < -20;
-            const isFarBelow = rect.top > viewportH + 20;
-            const shouldReveal = entry.isIntersecting;
-            const shouldHide = isFarAbove || isFarBelow;
+    const skillBars = document.querySelectorAll('.skill-bar');
+    if (prefersReducedMotion || !supportsIO) {
+        skillBars.forEach(bar => bar.classList.add('animated'));
+    } else {
+        const skillState = new WeakMap();
+        const skillObs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const isVisible = skillState.get(entry.target) === true;
+                const rect = entry.boundingClientRect;
+                const viewportH = window.innerHeight || document.documentElement.clientHeight;
+                const isFarAbove = rect.bottom < -20;
+                const isFarBelow = rect.top > viewportH + 20;
+                const shouldReveal = entry.isIntersecting;
+                const shouldHide = isFarAbove || isFarBelow;
 
-            if (shouldReveal && !isVisible) {
-                skillState.set(entry.target, true);
-                entry.target.classList.add('animated');
-            } else if (scrollRevealExit && shouldHide && isVisible) {
-                skillState.set(entry.target, false);
-                entry.target.classList.remove('animated');
-            }
+                if (shouldReveal && !isVisible) {
+                    skillState.set(entry.target, true);
+                    entry.target.classList.add('animated');
+                } else if (scrollRevealExit && shouldHide && isVisible) {
+                    skillState.set(entry.target, false);
+                    entry.target.classList.remove('animated');
+                }
+            });
+        }, { threshold: 0, rootMargin: '0px' });
+        
+        skillBars.forEach(bar => {
+            skillObs.observe(bar);
         });
-    }, { threshold: 0, rootMargin: '0px' });
-    
-    document.querySelectorAll('.skill-bar').forEach(bar => {
-        skillObs.observe(bar);
-    });
+    }
 
     // =============================================
     // TIMELINE PROGRESS DRAW-ON SCROLL
