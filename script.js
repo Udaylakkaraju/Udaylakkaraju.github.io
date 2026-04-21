@@ -8,9 +8,8 @@
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const finePointer = window.matchMedia('(pointer: fine)').matches;
-    /* Only reset off-screen on “desktop mouse” setups — avoids touch scroll flicker */
-    const scrollRevealExit = !prefersReducedMotion
-        && window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+    /* Full-site bouncy replay: reset when elements leave viewport on all devices */
+    const scrollRevealExit = !prefersReducedMotion;
 
     const revealIoOpts = {
         /* Any overlap counts — strict threshold/margin combos were skipping elements */
