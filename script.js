@@ -6,7 +6,8 @@
 (function () {
     'use strict';
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // User preference for this site: always run full motion on all devices.
+    const prefersReducedMotion = false;
     const finePointer = window.matchMedia('(pointer: fine)').matches;
     /* Full-site bouncy replay: reset when elements leave viewport on all devices */
     const scrollRevealExit = !prefersReducedMotion;
