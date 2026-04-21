@@ -74,7 +74,7 @@
                 <div class="career-summary-card">
                     <h3>Career Summary</h3>
                     <p>
-                        I build end-to-end analytics workflows using SQL, Python, dbt, BigQuery, Tableau, and Power BI - from data preparation to stakeholder-ready dashboards. Portfolio outcomes include AUC 0.96 fraud detection, a projected 19% diagnosis improvement in clinical workflows, and $2.77M profit-at-risk visibility in supply chain operations.
+                        I build end-to-end analytics workflows using SQL, Python, dbt, BigQuery, Tableau, and Power BI - from data preparation to stakeholder-ready dashboards. Portfolio outcomes include AUC 0.96 fraud detection, a projected 19% diagnosis improvement in clinical workflows, and $2.77M profit-at-risk visibility with a 0.741 AUC breach-risk model in supply chain operations.
                     </p>
                 </div>
                 <div class="hero-cta">
@@ -178,19 +178,27 @@
                         </svg>
                     </div>
                     <div class="bento-info">
-                        <div class="bento-tags"><span class="tag">Python</span><span class="tag">SQL</span></div>
-                        <h3>Supply Chain SLA Analytics</h3>
-                        <p>Identified $2.77M in high-profit orders at SLA breach risk and isolated the top five lanes driving 40.67% of SLA failures.</p>
-                        <a href="#live-dashboard" class="bento-action-button" data-dashboard-switch="fintech">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 20V10"></path>
-                                <path d="M12 20V4"></path>
-                                <path d="M6 20V14"></path>
-                            </svg>
-                            Explore Dashboard
-                        </a>
+                        <div class="bento-tags"><span class="tag">Python</span><span class="tag">SQL</span><span class="tag">BigQuery</span><span class="tag">dbt</span><span class="tag">BigQuery ML</span></div>
+                        <h3>Supply Chain Prioritization &amp; Risk Analysis</h3>
+                        <p>Built an end-to-end GCP + dbt + BigQuery pipeline across 180K+ orders — identified $2.77M in high-value profit at risk, isolated the top 5 lanes driving 40.67% of SLA failures, and predicted breach risk with a 0.741 AUC BigQuery ML model.</p>
+                        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.25rem;">
+                            <a href="#live-dashboard" class="bento-action-button" data-dashboard-switch="fintech">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 20V10"></path>
+                                    <path d="M12 20V4"></path>
+                                    <path d="M6 20V14"></path>
+                                </svg>
+                                Explore Dashboard
+                            </a>
+                            <a href="https://github.com/Udaylakkaraju/supply-chain-risk-analysis" class="bento-action-button" target="_blank" rel="noopener noreferrer">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                                </svg>
+                                View on GitHub
+                            </a>
+                        </div>
                     </div>
-                    <a href="https://github.com/Udaylakkaraju?tab=repositories" class="bento-link" target="_blank" rel="noopener noreferrer">
+                    <a href="https://github.com/Udaylakkaraju/supply-chain-risk-analysis" class="bento-link" target="_blank" rel="noopener noreferrer">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
                     </a>
                 </article>
@@ -231,7 +239,7 @@
             <div class="dashboard-switcher" data-reveal>
                 <button class="dashboard-switch-btn active" type="button" data-dashboard="fraud" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/College?showVizHome=no" data-title="Payment Fraud Detection Dashboard" aria-pressed="true">Fraud</button>
                 <button class="dashboard-switch-btn" type="button" data-dashboard="chd" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Stocks?showVizHome=no" data-title="Clinical Workflow Analytics Dashboard" aria-pressed="false">Clinical</button>
-                <button class="dashboard-switch-btn" type="button" data-dashboard="fintech" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no" data-title="Supply Chain SLA Dashboard" aria-pressed="false">Supply Chain</button>
+                <button class="dashboard-switch-btn" type="button" data-dashboard="fintech" data-src="https://public.tableau.com/views/RegionalSampleWorkbook/Flights?showVizHome=no" data-title="Supply Chain Prioritization &amp; Risk Analysis" aria-pressed="false">Supply Chain</button>
             </div>
             <div class="dashboard-frame-wrap" data-reveal>
                 <iframe
