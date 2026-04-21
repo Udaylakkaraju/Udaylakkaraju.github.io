@@ -102,6 +102,57 @@
         glowRaf = requestAnimationFrame(updateGlow);
     }
 
+    // =============================================
+    // INTERACTIVE DOT GRID — subtle pointer parallax
+    // =============================================
+    if (finePointer) {
+        const rootStyle = document.documentElement.style;
+        let dotTargetX = 50;
+        let dotTargetY = 50;
+        let dotX = 50;
+        let dotY = 50;
+        let dotRaf = 0;
+        let dotActive = false;
+
+        const applyDotVars = () => {
+            const shiftX = ((dotX - 50) / 50) * 8;
+            const shiftY = ((dotY - 50) / 50) * 8;
+            rootStyle.setProperty('--dot-grid-spot-x', `${dotX.toFixed(2)}%`);
+            rootStyle.setProperty('--dot-grid-spot-y', `${dotY.toFixed(2)}%`);
+            rootStyle.setProperty('--dot-grid-shift-x', `${shiftX.toFixed(2)}px`);
+            rootStyle.setProperty('--dot-grid-shift-y', `${shiftY.toFixed(2)}px`);
+            rootStyle.setProperty('--dot-grid-spot-alpha', dotActive ? '0.22' : '0.14');
+        };
+
+        const animateDotGrid = () => {
+            dotX += (dotTargetX - dotX) * 0.12;
+            dotY += (dotTargetY - dotY) * 0.12;
+            applyDotVars();
+
+            if (Math.abs(dotTargetX - dotX) > 0.02 || Math.abs(dotTargetY - dotY) > 0.02) {
+                dotRaf = requestAnimationFrame(animateDotGrid);
+                return;
+            }
+            dotRaf = 0;
+        };
+
+        document.addEventListener('mousemove', (e) => {
+            const viewportW = Math.max(window.innerWidth, 1);
+            const viewportH = Math.max(window.innerHeight, 1);
+            dotTargetX = Math.min(Math.max((e.clientX / viewportW) * 100, 0), 100);
+            dotTargetY = Math.min(Math.max((e.clientY / viewportH) * 100, 0), 100);
+            dotActive = true;
+            if (!dotRaf) dotRaf = requestAnimationFrame(animateDotGrid);
+        }, { passive: true });
+
+        document.addEventListener('mouseleave', () => {
+            dotTargetX = 50;
+            dotTargetY = 50;
+            dotActive = false;
+            if (!dotRaf) dotRaf = requestAnimationFrame(animateDotGrid);
+        });
+    }
+
 
     // =============================================
     // NAVIGATION
@@ -306,6 +357,50 @@
         });
         });
     }
+
+    // =============================================
+    // BENTO VISUAL SPOTLIGHT — Cursor/touch reactive
+    // =============================================
+    document.querySelectorAll('.bento-card').forEach(card => {
+        const visual = card.querySelector('.bento-visual');
+        if (!visual) return;
+
+        let rect;
+        const setHotspot = (clientX, clientY) => {
+            if (!rect) rect = card.getBoundingClientRect();
+            const x = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+            const y = Math.min(Math.max((clientY - rect.top) / rect.height, 0), 1);
+            visual.style.setProperty('--mx', `${(x * 100).toFixed(2)}%`);
+            visual.style.setProperty('--my', `${(y * 100).toFixed(2)}%`);
+        };
+
+        card.addEventListener('pointerenter', () => {
+            rect = card.getBoundingClientRect();
+        }, { passive: true });
+
+        card.addEventListener('pointermove', (e) => {
+            setHotspot(e.clientX, e.clientY);
+        }, { passive: true });
+
+        card.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            if (!t) return;
+            rect = card.getBoundingClientRect();
+            setHotspot(t.clientX, t.clientY);
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            const t = e.touches[0];
+            if (!t) return;
+            setHotspot(t.clientX, t.clientY);
+        }, { passive: true });
+
+        card.addEventListener('pointerleave', () => {
+            rect = null;
+            visual.style.setProperty('--mx', '50%');
+            visual.style.setProperty('--my', '42%');
+        }, { passive: true });
+    });
 
 
     // =============================================

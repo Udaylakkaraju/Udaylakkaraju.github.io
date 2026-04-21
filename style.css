@@ -49,6 +49,14 @@
     --radius: 20px;
     --radius-sm: 14px;
     --radius-lg: 28px;
+
+    /* Interactive dot-grid defaults */
+    --dot-grid-size: 32px;
+    --dot-grid-shift-x: 0px;
+    --dot-grid-shift-y: 0px;
+    --dot-grid-spot-x: 50%;
+    --dot-grid-spot-y: 50%;
+    --dot-grid-spot-alpha: 0.14;
 }
 
  [data-theme="dark"] {
@@ -249,15 +257,31 @@ body::before {
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: radial-gradient(circle, rgba(108, 92, 231, 0.18) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-image:
+        radial-gradient(
+            circle at var(--dot-grid-spot-x) var(--dot-grid-spot-y),
+            rgba(108, 92, 231, var(--dot-grid-spot-alpha)) 0%,
+            rgba(108, 92, 231, calc(var(--dot-grid-spot-alpha) * 0.55)) 18%,
+            transparent 38%
+        ),
+        radial-gradient(circle, rgba(108, 92, 231, 0.18) 1px, transparent 1px);
+    background-size: 100% 100%, var(--dot-grid-size) var(--dot-grid-size);
+    background-position: center center, var(--dot-grid-shift-x) var(--dot-grid-shift-y);
+    transition: background-position 0.2s ease, background-image 0.35s ease;
     mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
     -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
 }
 
 [data-theme="dark"] body::before {
-    background-image: radial-gradient(circle, rgba(108, 92, 231, 0.12) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-image:
+        radial-gradient(
+            circle at var(--dot-grid-spot-x) var(--dot-grid-spot-y),
+            rgba(162, 155, 254, calc(var(--dot-grid-spot-alpha) * 0.92)) 0%,
+            rgba(162, 155, 254, calc(var(--dot-grid-spot-alpha) * 0.5)) 20%,
+            transparent 42%
+        ),
+        radial-gradient(circle, rgba(108, 92, 231, 0.12) 1px, transparent 1px);
+    background-size: 100% 100%, var(--dot-grid-size) var(--dot-grid-size);
 }
 
  /* Subtle noise texture */
@@ -1072,7 +1096,23 @@ body::before {
     inset: 0;
     background: linear-gradient(140deg, rgba(16, 15, 36, 0.38), rgba(16, 15, 36, 0.08) 55%, transparent 100%);
     pointer-events: none;
+    z-index: 2;
+}
+
+.bento-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        220px circle at var(--mx, 50%) var(--my, 42%),
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(255, 255, 255, 0.1) 26%,
+        transparent 62%
+    );
+    opacity: 0.55;
     z-index: 1;
+    transition: opacity 0.28s ease;
 }
 
 /* Light theme: dark overlay reads as “washed out”; use a light veil so art stays visible */
@@ -1091,13 +1131,19 @@ body::before {
 
 .bento-visual > *:not(.bento-visual-media) {
     position: relative;
-    z-index: 2;
+    z-index: 3;
 }
 
 .bento-card:hover .bento-visual-media {
     transform: scale(1.08);
     opacity: 0.84;
   }
+
+.bento-card:hover .bento-visual::before,
+.bento-card:focus-visible .bento-visual::before,
+.bento-card:focus-within .bento-visual::before {
+    opacity: 0.85;
+}
 
 .bento-card:focus-visible .bento-visual-media,
 .bento-card:focus-within .bento-visual-media {
