@@ -1291,6 +1291,58 @@ body::before {
  /* ============================================
    TIMELINE
    ============================================ */
+.timeline-overview {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 4px 0 24px;
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    box-shadow: var(--shadow-up);
+}
+
+.timeline-overview::before {
+    content: '';
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent), transparent);
+    pointer-events: none;
+}
+
+.timeline-overview-item {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    border: 1px solid var(--glass-border);
+}
+
+.timeline-overview-year {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+}
+
+.timeline-overview-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.35;
+}
+
  .timeline {
      position: relative;
      padding-left: 40px;
@@ -1931,6 +1983,16 @@ body::before {
      .bento-card--tall {
          grid-row: span 1;
      }
+
+    .timeline-overview {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .timeline-overview::before {
+        display: none;
+    }
 
       .contact-grid {
           grid-template-columns: repeat(2, 1fr);
